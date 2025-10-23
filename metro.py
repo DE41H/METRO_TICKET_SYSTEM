@@ -16,7 +16,7 @@ class Station:
 
     @property
     def name(self):
-        with open("stations.csv", "r") as file:
+        with open("stations.csv", "r", newline="") as file:
             reader = csv.DictReader(file, delimiter=",")
             for row in reader:
                 if int(row["id"]) == self.uid:
@@ -24,7 +24,7 @@ class Station:
                 
     @property
     def neighbours(self):
-        with open("stations.csv", "r") as file:
+        with open("stations.csv", "r", newline="") as file:
             reader = csv.DictReader(file, delimiter=",")
             for row in reader:
                 if int(row["id"]) == self.uid:
@@ -32,7 +32,7 @@ class Station:
                 
     @classmethod
     def load(cls):
-        with open("stations.csv", "r") as file:
+        with open("stations.csv", "r", newline="") as file:
             reader = csv.DictReader(file, delimiter=",")
             for row in reader:
                 cls.stations[int(row["id"])] = Station(int(row["id"]))
@@ -61,7 +61,7 @@ class Line:
                 
     @property
     def stations(self) -> list:
-        with open("lines.csv", "r") as file:
+        with open("lines.csv", "r", newline="") as file:
             reader = csv.DictReader(file, delimiter = ",")
             for row in reader:
                 if row["name"] == self.name:
@@ -71,7 +71,7 @@ class Line:
 
     @classmethod
     def load(cls):
-        with open("lines.csv", "r") as file:
+        with open("lines.csv", "r", newline="") as file:
             reader = csv.DictReader(file, delimiter = ",")
             for row in reader:
                 cls.lines.append(Line(row["name"]))
@@ -81,15 +81,15 @@ class Ticket:
 
     tickets: list = []
 
-    def __init__(self, uid: int):
+    def __init__(self, uid):
         self.uid = uid
 
-    def __repr_(self):
+    def __repr__(self):
         return self.uid
 
     @property
     def start_uid(self):
-        with open("tickets.csv", "r") as file:
+        with open("tickets.csv", "r", newline="") as file:
             reader = csv.DictReader(file, delimiter = ",")
             for row in reader:
                 if row["id"] == self.uid:
@@ -108,40 +108,44 @@ class Ticket:
         with open("tickets.csv", "r") as file:
             reader = csv.DictReader(file, delimiter = ",")
             for row in reader:
-                print(row)
-                cls.tickets.append(Ticket(int(row["id"])))
+                cls.tickets.append(Ticket(row["id"]))
 
     @classmethod
     def calc_price(cls, start_uid: int, stop_uid: int):
         pass
 
     @classmethod
-    def buy(cls, start_uid: int, stop_uid: int):
+    def buy(cls, start_uid: int, stop_uid: int, newline=""):
         ticket = [secrets.token_hex(8), start_uid, stop_uid]
-        with open("tickets.csv", "a") as file:
-            writer = csv.writer(file)
+        with open("tickets.csv", "a", newline="") as file:
+            writer = csv.writer(file, delimiter=",")
             writer.writerow(ticket)
-        cls.tickets.append(ticket)
+        cls.tickets.append(Ticket(ticket[0]))
             
     @classmethod
     def display(cls):
         for ticket in cls.tickets:
+            print(ticket)
             print(f'[{ticket.uid}]: {Station.name_from_uid(ticket.start_uid)} => {Station.name_from_uid(ticket.stop_uid)}')
     
     @classmethod
-    def remove(cls, uid: int):
+    def remove(cls, uid):
         for ticket in cls.tickets:
             if ticket.uid == uid:
                 cls.tickets.remove(ticket)
+        with open("tickets.csv", "w", newline="") as file:
+            writer = csv.writer(file, delimiter=",")
+            writer.writerows(cls.tickets)
 
 
 def close():
+    os.system('cls' if os.name == 'nt' else 'clear')
     os._exit(0)
 
 def remove():
     os.system('cls' if os.name == 'nt' else 'clear')
     Ticket.display()
-    choice: int = int(input("Enter the uid of the ticket to remove:\t"))
+    choice = input("Enter the uid of the ticket to remove:\t")
     Ticket.remove(choice)
     print(f'Ticket with uid: {choice} has been deleted')
 
@@ -175,7 +179,6 @@ def buy():
     if start_uid == stop_uid:
             print("Start and Destination cannot be the same!\nTry Again...")
             time.sleep(2)
-            buy()
             return
     price = Ticket.calc_price(start_uid, stop_uid)
     while True:
