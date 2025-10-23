@@ -83,6 +83,9 @@ class Ticket:
     def __init__(self, id: int):
         self.id = id
 
+    def __repr_(self):
+        return self.id
+
     @property
     def start_id(self):
         with open("tickets.csv", "r") as file:
@@ -188,6 +191,7 @@ def buy():
     
 
 def view():
+    os.system('cls' if os.name == 'nt' else 'clear')
     Ticket.display()
     input("Press enter to finish viewing...")
 
@@ -202,8 +206,23 @@ menu = {
 
 def main():
     while True:
-        print("")
-
+        print("""MAIN MENU
+              --------------
+              1 => View your tickets
+              2 => Buy tickets
+              3 => Remove tickets
+              0 => Exit
+              """)
+        try:
+            choice = int(input("Enter option ID:\t"))
+            if choice not in menu:
+                raise ValueError
+        except ValueError:
+            print("Not a valid option!\nTry Again...")
+            continue
+        func = menu.get(choice)
+        if func:
+            func()
 
 if __name__ == "__main__":
     main()
