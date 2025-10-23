@@ -1,6 +1,6 @@
 import os
 import csv
-import uuid
+import secrets
 
 
 class Station:
@@ -39,7 +39,7 @@ class Station:
     @classmethod
     def display(cls):
         for station in cls.stations:
-            print(f'[{station}] => {cls.stations[station].name}')
+            print(f'[{station}]: {cls.stations[station].name}')
 
     @classmethod
     def name_from_id(cls, id: int):
@@ -145,7 +145,7 @@ class Ticket:
                 print(f'Start:\t{Station.name_from_id(start_id)}\nDestination:\t{Station.name_from_id(stop_id)}\nThe price will be ${price}')
                 choice = input("Do you wish to purchase this ticket? (Y/N)").lower()
                 if choice == "y":
-                    ticket = [uuid.uuid4, start_id, stop_id]
+                    ticket = [secrets.token_hex(8), start_id, stop_id]
                     with open("tickets.csv", "a") as file:
                         writer = csv.writer(file)
                         writer.writerow(ticket)
@@ -162,4 +162,14 @@ class Ticket:
     @classmethod
     def display(cls):
         for ticket in cls.tickets:
-            print()
+            print(f'[{ticket.id}]: {Station.name_from_id(ticket.start_id)} => {Station.name_from_id(ticket.stop_id)}')
+    
+    @classmethod
+    def remove(cls, id: int):
+        for ticket in cls.tickets:
+            if ticket.id == id:
+                cls.tickets.remove(ticket)
+
+
+def main():
+    pass
