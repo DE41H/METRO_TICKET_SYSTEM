@@ -1,5 +1,6 @@
 import os
 import csv
+import time
 import secrets
 
 
@@ -7,8 +8,8 @@ class Station:
     
     stations: dict = {}
 
-    def __init__(self, id: int):
-        self.id = id
+    def __init__(self, uid: int):
+        self.uid = uid
 
     def __repr__(self) -> str:
         return str(self.name)
@@ -18,7 +19,7 @@ class Station:
         with open("stations.csv", "r") as file:
             reader = csv.DictReader(file, delimiter=",")
             for row in reader:
-                if int(row["id"]) == self.id:
+                if int(row["id"]) == self.uid:
                     return row["name"]
                 
     @property
@@ -26,7 +27,7 @@ class Station:
         with open("stations.csv", "r") as file:
             reader = csv.DictReader(file, delimiter=",")
             for row in reader:
-                if int(row["id"]) == self.id:
+                if int(row["id"]) == self.uid:
                     return row["neighbours"].split("$")
                 
     @classmethod
@@ -42,10 +43,10 @@ class Station:
             print(f'[{station}]: {cls.stations[station].name}')
 
     @classmethod
-    def name_from_id(cls, id: int):
+    def name_from_uid(cls, uid: int):
         for station in cls.stations:
-            if station.id == id:
-                return station.name
+            if cls.stations[station].uid == uid:
+                return cls.stations[station].name
 
 
 class Line:
@@ -80,27 +81,27 @@ class Ticket:
 
     tickets: list = []
 
-    def __init__(self, id: int):
-        self.id = id
+    def __init__(self, uid: int):
+        self.uid = uid
 
     def __repr_(self):
-        return self.id
+        return self.uid
 
     @property
-    def start_id(self):
+    def start_uid(self):
         with open("tickets.csv", "r") as file:
             reader = csv.DictReader(file, delimiter = ",")
             for row in reader:
-                if row["id"] == self.id:
-                    return row["start_id"]
+                if row["id"] == self.uid:
+                    return row["start_uid"]
                 
     @property
-    def stop_id(self):
+    def stop_uid(self):
         with open("tickets.csv", "r") as file:
             reader = csv.DictReader(file, delimiter = ",")
             for row in reader:
-                if row["id"] == self.id:
-                    return row["stop_id"]
+                if row["id"] == self.uid:
+                    return row["stop_uid"]
                 
     @classmethod
     def load(cls):
@@ -111,12 +112,12 @@ class Ticket:
                 cls.tickets.append(Ticket(int(row["id"])))
 
     @classmethod
-    def calc_price(cls, start_id: int, stop_id: int):
+    def calc_price(cls, start_uid: int, stop_uid: int):
         pass
 
     @classmethod
-    def buy(cls, start_id: int, stop_id: int):
-        ticket = [secrets.token_hex(8), start_id, stop_id]
+    def buy(cls, start_uid: int, stop_uid: int):
+        ticket = [secrets.token_hex(8), start_uid, stop_uid]
         with open("tickets.csv", "a") as file:
             writer = csv.writer(file)
             writer.writerow(ticket)
@@ -125,12 +126,12 @@ class Ticket:
     @classmethod
     def display(cls):
         for ticket in cls.tickets:
-            print(f'[{ticket.id}]: {Station.name_from_id(ticket.start_id)} => {Station.name_from_id(ticket.stop_id)}')
+            print(f'[{ticket.uid}]: {Station.name_from_uid(ticket.start_uid)} => {Station.name_from_uid(ticket.stop_uid)}')
     
     @classmethod
-    def remove(cls, id: int):
+    def remove(cls, uid: int):
         for ticket in cls.tickets:
-            if ticket.id == id:
+            if ticket.uid == uid:
                 cls.tickets.remove(ticket)
 
 
@@ -140,47 +141,50 @@ def close():
 def remove():
     os.system('cls' if os.name == 'nt' else 'clear')
     Ticket.display()
-    choice: int = int(input("Enter the ID of the ticket to remove:\t"))
+    choice: int = int(input("Enter the uid of the ticket to remove:\t"))
     Ticket.remove(choice)
-    print(f'Ticket with ID: {choice} has been deleted')
+    print(f'Ticket with uid: {choice} has been deleted')
 
 def buy():
-    start_id: int
-    stop_id: int
+    start_uid: int
+    stop_uid: int
     while True:
         os.system('cls' if os.name == 'nt' else 'clear')
         Station.display()
         try:
-            start_id = int(input("Enter starting Station ID:\t"))
-            if start_id not in Station.stations.keys():
+            start_uid = int(input("Enter starting Station uid:\t"))
+            if start_uid not in Station.stations.keys():
                 raise ValueError
             break
         except ValueError:
-            print("Not a valid Station ID!\nTry Again...")
+            print("Not a valuid Station uid!\nTry Again...")
+            time.sleep(2)
             continue
     while True:
         os.system('cls' if os.name == 'nt' else 'clear')
         Station.display()
         try:
-            stop_id = int(input("Enter destination Station ID:\t"))
-            if stop_id not in Station.stations.keys():
+            stop_uid = int(input("Enter destination Station uid:\t"))
+            if stop_uid not in Station.stations.keys():
                 raise ValueError
             break
         except ValueError:
-            print("Not a valid Station ID!\nTry Again...")
+            print("Not a valuid Station uid!\nTry Again...")
+            time.sleep(2)
             continue
-    if start_id == stop_id:
+    if start_uid == stop_uid:
             print("Start and Destination cannot be the same!\nTry Again...")
+            time.sleep(2)
             buy()
             return
-    price = Ticket.calc_price(start_id, stop_id)
+    price = Ticket.calc_price(start_uid, stop_uid)
     while True:
         os.system('cls' if os.name == 'nt' else 'clear')
         try:
-            print(f'Start:\t{Station.name_from_id(start_id)}\nDestination:\t{Station.name_from_id(stop_id)}\nThe price will be ${price}')
+            print(f'Start:\t{Station.name_from_uid(start_uid)}\nDestination:\t{Station.name_from_uid(stop_uid)}\nThe price will be ${price}')
             choice = input("Do you wish to purchase this ticket? (Y/N)").lower()
             if choice == "y":
-                Ticket.buy(start_id, stop_id)
+                Ticket.buy(start_uid, stop_uid)
                 return
             elif choice == "n":
                 return
@@ -188,6 +192,7 @@ def buy():
                 raise ValueError
         except ValueError:
             print("Error!\nTry again...")
+            time.sleep(2)
             continue
     
 
@@ -219,11 +224,12 @@ def main():
               0 => Exit
               """)
         try:
-            choice = int(input("Enter option ID:\t"))
+            choice = int(input("Enter option uid:\t"))
             if choice not in menu:
                 raise ValueError
         except ValueError:
-            print("Not a valid option!\nTry Again...")
+            print("Not a valuid option!\nTry Again...")
+            time.sleep(2)
             continue
         func = menu.get(choice)
         if func:
