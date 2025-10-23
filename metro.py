@@ -1,7 +1,8 @@
 import os
 import csv
 import time
-import secrets
+import uuid
+import base64
 
 
 class Station:
@@ -44,9 +45,7 @@ class Station:
 
     @classmethod
     def name_from_uid(cls, uid: int):
-        for station in cls.stations:
-            if cls.stations[station].uid == uid:
-                return cls.stations[station].name
+        return cls.stations[int(uid)].name
 
 
 class Line:
@@ -116,7 +115,7 @@ class Ticket:
 
     @classmethod
     def buy(cls, start_uid: int, stop_uid: int, newline=""):
-        ticket = [secrets.token_hex(8), start_uid, stop_uid]
+        ticket = [cls.create_uid(), start_uid, stop_uid]
         with open("tickets.csv", "a", newline="") as file:
             writer = csv.writer(file, delimiter=",")
             writer.writerow(ticket)
@@ -125,7 +124,6 @@ class Ticket:
     @classmethod
     def display(cls):
         for ticket in cls.tickets:
-            print(ticket)
             print(f'[{ticket.uid}]: {Station.name_from_uid(ticket.start_uid)} => {Station.name_from_uid(ticket.stop_uid)}')
     
     @classmethod
@@ -138,6 +136,13 @@ class Ticket:
             writer.writerow(["uid", "start_uid", "stop_uid"])
             for ticket in cls.tickets:
                 writer.writerow([ticket.uid, ticket.start_uid, ticket.stop_uid])
+
+    @classmethod
+    def create_uid(cls):
+        uid = uuid.uuid4()
+        uid = uid.bytes
+        uid = base64.urlsafe_b64encode(uid).rstrip(b'=').decode('utf-8')
+        return uid
 
 
 def close():
