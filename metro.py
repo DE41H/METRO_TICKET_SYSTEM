@@ -152,9 +152,9 @@ def close():
 def remove():
     os.system('cls' if os.name == 'nt' else 'clear')
     Ticket.display()
-    choice = input("Enter the uid of the ticket to remove:\t")
+    choice = input("Enter the ID of the ticket to remove: ")
     Ticket.remove(choice)
-    print(f'Ticket with uid: {choice} has been deleted')
+    print(f'Ticket with ID: {choice} has been deleted!')
 
 def buy():
     start_uid: int
@@ -163,24 +163,24 @@ def buy():
         os.system('cls' if os.name == 'nt' else 'clear')
         Station.display()
         try:
-            start_uid = int(input("Enter starting Station uid:\t"))
+            start_uid = int(input("Enter starting Station ID: "))
             if start_uid not in Station.stations.keys():
                 raise ValueError
             break
         except ValueError:
-            print("Not a valuid Station uid!\nTry Again...")
+            print("Not a valid Station ID!\nTry Again...")
             time.sleep(2)
             continue
     while True:
         os.system('cls' if os.name == 'nt' else 'clear')
         Station.display()
         try:
-            stop_uid = int(input("Enter destination Station uid:\t"))
+            stop_uid = int(input("Enter destination Station ID: "))
             if stop_uid not in Station.stations.keys():
                 raise ValueError
             break
         except ValueError:
-            print("Not a valuid Station uid!\nTry Again...")
+            print("Not a valid Station ID!\nTry Again...")
             time.sleep(2)
             continue
     if start_uid == stop_uid:
@@ -191,8 +191,8 @@ def buy():
     while True:
         os.system('cls' if os.name == 'nt' else 'clear')
         try:
-            print(f'Start:\t{Station.name_from_uid(start_uid)}\nDestination:\t{Station.name_from_uid(stop_uid)}\nThe price will be ${price}')
-            choice = input("Do you wish to purchase this ticket? (Y/N)").lower()
+            print(f'Start: {Station.name_from_uid(start_uid)}\nDestination: {Station.name_from_uid(stop_uid)}\nThe price will be {price}$')
+            choice = input("Do you wish to purchase this ticket? (y/n)\n").lower()
             if choice == "y":
                 Ticket.buy(start_uid, stop_uid)
                 return
@@ -226,19 +226,13 @@ def main():
     Ticket.load()
     while True:
         os.system('cls' if os.name == 'nt' else 'clear')
-        print("""MAIN MENU
-              --------------
-              1 => View your tickets
-              2 => Buy tickets
-              3 => Remove tickets
-              0 => Exit
-              """)
+        print("MAIN MENU\n--------------\n[1] => View your tickets\n[2] => Buy tickets\n[3] => Remove tickets\n[0] => Exit")
         try:
-            choice = int(input("Enter option uid:\t"))
+            choice = int(input("Enter Option ID: "))
             if choice not in menu:
                 raise ValueError
         except ValueError:
-            print("Not a valuid option!\nTry Again...")
+            print("Not a valid option!\nTry Again...")
             time.sleep(2)
             continue
         func = menu.get(choice)
