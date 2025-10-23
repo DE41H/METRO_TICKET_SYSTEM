@@ -111,53 +111,12 @@ class Ticket:
         pass
 
     @classmethod
-    def buy(cls):
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("TICKET PURCHASE\n----------------------------------------------------------\n\nChoose a starting station:")
-        Station.display()
-        try:
-            start_id = int(input("Enter Station ID:\t"))
-            if start_id not in Station.stations.keys():
-                raise ValueError
-        except ValueError:
-            print("Not a valid Station ID!\nTry Again...")
-            cls.buy()
-            return
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print("TICKET PURCHASE\n----------------------------------------------------------\n\nChoose an ending station:")
-        Station.display()
-        try:
-            stop_id = int(input("Enter Station ID:\t"))
-            if stop_id not in Station.stations.keys():
-                raise ValueError
-        except ValueError:
-            print("Not a valid Station ID!\nTry Again...")
-            cls.buy()
-            return
-        os.system('cls' if os.name == 'nt' else 'clear')
-        if start_id == stop_id:
-            print("Start and Destination cannot be the same!\nTry Again...")
-            return
-        price = cls.calc_price(start_id, stop_id)
-        while True:
-            os.system('cls' if os.name == 'nt' else 'clear')
-            try:
-                print(f'Start:\t{Station.name_from_id(start_id)}\nDestination:\t{Station.name_from_id(stop_id)}\nThe price will be ${price}')
-                choice = input("Do you wish to purchase this ticket? (Y/N)").lower()
-                if choice == "y":
-                    ticket = [secrets.token_hex(8), start_id, stop_id]
-                    with open("tickets.csv", "a") as file:
-                        writer = csv.writer(file)
-                        writer.writerow(ticket)
-                    cls.tickets.append(ticket)
-                    return
-                elif choice == "n":
-                    return
-                else:
-                    raise ValueError
-            except ValueError:
-                print("Error!\nTry again...")
-                continue
+    def buy(cls, start_id: int, stop_id: int):
+        ticket = [secrets.token_hex(8), start_id, stop_id]
+        with open("tickets.csv", "a") as file:
+            writer = csv.writer(file)
+            writer.writerow(ticket)
+        cls.tickets.append(ticket)
             
     @classmethod
     def display(cls):
@@ -171,5 +130,80 @@ class Ticket:
                 cls.tickets.remove(ticket)
 
 
+def close():
+    os._exit(0)
+
+def remove():
+    os.system('cls' if os.name == 'nt' else 'clear')
+    Ticket.display()
+    choice: int = int(input("Enter the ID of the ticket to remove:\t"))
+    Ticket.remove(choice)
+    print(f'Ticket with ID: {choice} has been deleted')
+
+def buy():
+    start_id: int
+    stop_id: int
+    while True:
+        os.system('cls' if os.name == 'nt' else 'clear')
+        Station.display()
+        try:
+            start_id = int(input("Enter starting Station ID:\t"))
+            if start_id not in Station.stations.keys():
+                raise ValueError
+            break
+        except ValueError:
+            print("Not a valid Station ID!\nTry Again...")
+            continue
+    while True:
+        os.system('cls' if os.name == 'nt' else 'clear')
+        Station.display()
+        try:
+            stop_id = int(input("Enter destination Station ID:\t"))
+            if stop_id not in Station.stations.keys():
+                raise ValueError
+            break
+        except ValueError:
+            print("Not a valid Station ID!\nTry Again...")
+            continue
+    if start_id == stop_id:
+            print("Start and Destination cannot be the same!\nTry Again...")
+            buy()
+            return
+    price = Ticket.calc_price(start_id, stop_id)
+    while True:
+        os.system('cls' if os.name == 'nt' else 'clear')
+        try:
+            print(f'Start:\t{Station.name_from_id(start_id)}\nDestination:\t{Station.name_from_id(stop_id)}\nThe price will be ${price}')
+            choice = input("Do you wish to purchase this ticket? (Y/N)").lower()
+            if choice == "y":
+                Ticket.buy(start_id, stop_id)
+                return
+            elif choice == "n":
+                return
+            else:
+                raise ValueError
+        except ValueError:
+            print("Error!\nTry again...")
+            continue
+    
+
+def view():
+    Ticket.display()
+    input("Press enter to finish viewing...")
+
+
+menu = {
+    1: view,
+    2: buy,
+    3: remove,
+    0: close
+}
+
+
 def main():
-    pass
+    while True:
+        print("")
+
+
+if __name__ == "__main__":
+    main()
