@@ -19,7 +19,7 @@ class Station:
         with open("stations.csv", "r", newline="") as file:
             reader = csv.DictReader(file, delimiter=",")
             for row in reader:
-                if int(row["id"]) == self.uid:
+                if int(row["uid"]) == self.uid:
                     return row["name"]
                 
     @property
@@ -27,7 +27,7 @@ class Station:
         with open("stations.csv", "r", newline="") as file:
             reader = csv.DictReader(file, delimiter=",")
             for row in reader:
-                if int(row["id"]) == self.uid:
+                if int(row["uid"]) == self.uid:
                     return row["neighbours"].split("$")
                 
     @classmethod
@@ -35,7 +35,7 @@ class Station:
         with open("stations.csv", "r", newline="") as file:
             reader = csv.DictReader(file, delimiter=",")
             for row in reader:
-                cls.stations[int(row["id"])] = Station(int(row["id"]))
+                cls.stations[int(row["uid"])] = Station(int(row["uid"]))
 
     @classmethod
     def display(cls):
@@ -92,7 +92,7 @@ class Ticket:
         with open("tickets.csv", "r", newline="") as file:
             reader = csv.DictReader(file, delimiter = ",")
             for row in reader:
-                if row["id"] == self.uid:
+                if row["uid"] == self.uid:
                     return row["start_uid"]
                 
     @property
@@ -100,7 +100,7 @@ class Ticket:
         with open("tickets.csv", "r") as file:
             reader = csv.DictReader(file, delimiter = ",")
             for row in reader:
-                if row["id"] == self.uid:
+                if row["uid"] == self.uid:
                     return row["stop_uid"]
                 
     @classmethod
@@ -108,7 +108,7 @@ class Ticket:
         with open("tickets.csv", "r") as file:
             reader = csv.DictReader(file, delimiter = ",")
             for row in reader:
-                cls.tickets.append(Ticket(row["id"]))
+                cls.tickets.append(Ticket(row["uid"]))
 
     @classmethod
     def calc_price(cls, start_uid: int, stop_uid: int):
@@ -135,7 +135,9 @@ class Ticket:
                 cls.tickets.remove(ticket)
         with open("tickets.csv", "w", newline="") as file:
             writer = csv.writer(file, delimiter=",")
-            writer.writerows(cls.tickets)
+            writer.writerow(["uid", "start_uid", "stop_uid"])
+            for ticket in cls.tickets:
+                writer.writerow([ticket.uid, ticket.start_uid, ticket.stop_uid])
 
 
 def close():
