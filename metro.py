@@ -104,9 +104,10 @@ class Ticket:
                 
     @classmethod
     def load(cls):
-        with open("lines.csv", "r") as file:
+        with open("tickets.csv", "r") as file:
             reader = csv.DictReader(file, delimiter = ",")
             for row in reader:
+                print(row)
                 cls.tickets.append(Ticket(int(row["id"])))
 
     @classmethod
@@ -205,7 +206,11 @@ menu = {
 
 
 def main():
+    Station.load()
+    Line.load()
+    Ticket.load()
     while True:
+        os.system('cls' if os.name == 'nt' else 'clear')
         print("""MAIN MENU
               --------------
               1 => View your tickets
