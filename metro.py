@@ -37,7 +37,7 @@ class Station:
             print(f'[{station}]: {cls.stations[station].name}')
 
     @classmethod
-    def name_from_uid(cls, uid: int) -> str:
+    def from_uid(cls, uid: int) -> str:
         return cls.stations[int(uid)]
 
 
@@ -85,30 +85,29 @@ class Ticket:
 
     @classmethod
     def buy(cls, start_uid: int, stop_uid: int):
-        ticket = [cls.create_uid(), start_uid, stop_uid]
-        with open(TICKETS_FILE, "a", newline=NEWLINE) as file:
-            writer = csv.writer(file, delimiter=DELIMITER)
-            writer.writerow(ticket)
-        cls.tickets.append(Ticket(ticket[0], ticket[1], ticket[2]))
+        cls.tickets.append(Ticket(cls.create_uid(), start_uid, stop_uid))
             
     @classmethod
     def display(cls):
         for ticket in cls.tickets:
-            print(f'[{ticket.uid}]: {Station.name_from_uid(ticket.start_uid)} => {Station.name_from_uid(ticket.stop_uid)}')
+            print(f'[{ticket.uid}]: {Station.from_uid(ticket.start_uid)} => {Station.from_uid(ticket.stop_uid)}')
     
     @classmethod
     def remove(cls, uid):
         for ticket in cls.tickets:
             if ticket.uid == uid:
                 cls.tickets.remove(ticket)
+
+    @classmethod
+    def save(cls):
         with open(TICKETS_FILE, "w", newline=NEWLINE) as file:
             writer = csv.writer(file, delimiter=DELIMITER)
             writer.writerow(["uid", "start_uid", "stop_uid"])
             for ticket in cls.tickets:
-                writer.writerow([ticket.uid, ticket.start_uid, ticket.stop_uid])
+                writer.writerow([ticket, ticket.start_uid, ticket.stop_uid])
 
-    @classmethod
-    def create_uid(cls):
+    @staticmethod
+    def create_uid() -> str:
         uid = uuid.uuid4()
         uid = uid.bytes
         uid = base64.urlsafe_b64encode(uid).rstrip(b'=').decode('utf-8')
@@ -116,6 +115,7 @@ class Ticket:
 
 
 def close():
+    Ticket.save()
     os.system('cls' if os.name == 'nt' else 'clear')
     os._exit(0)
 
@@ -161,7 +161,7 @@ def buy():
     while True:
         os.system('cls' if os.name == 'nt' else 'clear')
         try:
-            print(f'Start: {Station.name_from_uid(start_uid)}\nDestination: {Station.name_from_uid(stop_uid)}\nThe price will be {price}$')
+            print(f'Start: {Station.from_uid(start_uid)}\nDestination: {Station.from_uid(stop_uid)}\nThe price will be {price}$')
             choice = input("Do you wish to purchase this ticket? (y/n)\n").lower()
             if choice == "y":
                 Ticket.buy(start_uid, stop_uid)
