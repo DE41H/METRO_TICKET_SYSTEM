@@ -4,6 +4,12 @@ import time
 import uuid
 import base64
 
+STATIONS_FILE = "stations.csv"
+LINES_FILE = "lines.csv"
+TICKETS_FILE = "tickets.csv"
+DELIMITER = "$"
+NEWLINE = ""
+
 
 class Station:
     
@@ -19,8 +25,8 @@ class Station:
 
     @classmethod
     def load(cls):
-        with open("stations.csv", "r", newline="") as file:
-            reader = csv.DictReader(file, delimiter=",")
+        with open(STATIONS_FILE, "r", newline=NEWLINE) as file:
+            reader = csv.DictReader(file, delimiter=DELIMITER)
             for row in reader:
                 cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"], row["neighbours"].split("$"))
 
@@ -47,8 +53,8 @@ class Line:
 
     @classmethod
     def load(cls):
-        with open("lines.csv", "r", newline="") as file:
-            reader = csv.DictReader(file, delimiter = ",")
+        with open(LINES_FILE, "r", newline=NEWLINE) as file:
+            reader = csv.DictReader(file, delimiter = DELIMITER)
             for row in reader:
                 cls.lines.append(Line(row["name"], row["stations"].split("$")))
 
@@ -67,8 +73,8 @@ class Ticket:
                 
     @classmethod
     def load(cls):
-        with open("tickets.csv", "r") as file:
-            reader = csv.DictReader(file, delimiter = ",")
+        with open(TICKETS_FILE, "r") as file:
+            reader = csv.DictReader(file, delimiter = DELIMITER)
             for row in reader:
                 cls.tickets.append(Ticket(row["uid"], int(row["start_uid"]), int(row["stop_uid"])))
 
@@ -79,8 +85,8 @@ class Ticket:
     @classmethod
     def buy(cls, start_uid: int, stop_uid: int):
         ticket = [cls.create_uid(), start_uid, stop_uid]
-        with open("tickets.csv", "a", newline="") as file:
-            writer = csv.writer(file, delimiter=",")
+        with open(TICKETS_FILE, "a", newline=NEWLINE) as file:
+            writer = csv.writer(file, delimiter=DELIMITER)
             writer.writerow(ticket)
         cls.tickets.append(Ticket(ticket[0], ticket[1], ticket[2]))
             
@@ -94,8 +100,8 @@ class Ticket:
         for ticket in cls.tickets:
             if ticket.uid == uid:
                 cls.tickets.remove(ticket)
-        with open("tickets.csv", "w", newline="") as file:
-            writer = csv.writer(file, delimiter=",")
+        with open(TICKETS_FILE, "w", newline=NEWLINE) as file:
+            writer = csv.writer(file, delimiter=DELIMITER)
             writer.writerow(["uid", "start_uid", "stop_uid"])
             for ticket in cls.tickets:
                 writer.writerow([ticket.uid, ticket.start_uid, ticket.stop_uid])
