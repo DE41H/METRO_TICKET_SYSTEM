@@ -1,5 +1,6 @@
 import os
 import csv
+import sys
 import time
 import uuid
 import base64
@@ -32,10 +33,10 @@ class Station:
                 reader = csv.DictReader(file, delimiter=DELIMITER)
                 for row in reader:
                     cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"], list(map(int, row["neighbours"].split(LIST_DELIMITER))))
-        except csv.Error:
-            print(f'{STATIONS_FILE} does not exist or is corrupted!')
+        except:
+            print(f'Error loading {STATIONS_FILE}!')
             time.sleep(DELAY)
-            close()
+            sys.exit(1)
 
     @classmethod
     def display(cls):
@@ -65,10 +66,10 @@ class Line:
                 reader = csv.DictReader(file, delimiter=DELIMITER)
                 for row in reader:
                     cls.lines.append(Line(row["name"], list(map(int, row["stations"].split(LIST_DELIMITER)))))
-        except csv.Error:
-            print(f'{LINES_FILE} does not exist or is corrupted!')
+        except:
+            print(f'Error loading {LINES_FILE}!')
             time.sleep(DELAY)
-            close()
+            sys.exit(1)
 
 
 class Ticket:
@@ -90,10 +91,10 @@ class Ticket:
                 reader = csv.DictReader(file, delimiter=DELIMITER)
                 for row in reader:
                     cls.tickets.append(Ticket(row["uid"], int(row["start_uid"]), int(row["stop_uid"])))
-        except csv.Error:
-            print(f'{TICKETS_FILE} does not exist or is corrupted!')
+        except:
+            print(f'Error loading {TICKETS_FILE}!')
             time.sleep(DELAY)
-            close()
+            sys.exit(1)
 
     @classmethod
     def calc_price(cls, start_uid: int, stop_uid: int):
@@ -121,12 +122,11 @@ class Ticket:
                 writer = csv.writer(file, delimiter=DELIMITER)
                 writer.writerow(["uid", "start_uid", "stop_uid"])
                 for ticket in cls.tickets:
-                    writer.writerow([ticket, ticket.start_uid, ticket.stop_uid])
-        except csv.Error:
-            print(f'Error writing to {TICKETS_FILE}')
+                    writer.writerow([ticket.uid, ticket.start_uid, ticket.stop_uid])
+        except:
+            print(f'Error writing to {TICKETS_FILE}!')
             time.sleep(DELAY)
-            os.system('cls' if os.name == 'nt' else 'clear')
-            os._exit(0)
+            sys.exit(1)
 
     @staticmethod
     def create_uid() -> str:
@@ -139,7 +139,7 @@ class Ticket:
 def close():
     Ticket.save()
     os.system('cls' if os.name == 'nt' else 'clear')
-    os._exit(0)
+    sys.exit(1)
 
 def remove():
     os.system('cls' if os.name == 'nt' else 'clear')
