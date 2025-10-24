@@ -10,6 +10,7 @@ TICKETS_FILE = "tickets.csv"
 DELIMITER = ","
 LIST_DELIMITER = "$"
 NEWLINE = ""
+DELAY = 2
 
 
 class Station:
@@ -26,10 +27,15 @@ class Station:
 
     @classmethod
     def load(cls):
-        with open(STATIONS_FILE, "r", newline=NEWLINE) as file:
-            reader = csv.DictReader(file, delimiter=DELIMITER)
-            for row in reader:
-                cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"], row["neighbours"].split(LIST_DELIMITER))
+        try:
+            with open(STATIONS_FILE, "r", newline=NEWLINE) as file:
+                reader = csv.DictReader(file, delimiter=DELIMITER)
+                for row in reader:
+                    cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"], list(map(int, row["neighbours"].split(LIST_DELIMITER))))
+        except csv.Error:
+            print(f'{STATIONS_FILE} does not exist or is corrupted!')
+            time.sleep(DELAY)
+            close()
 
     @classmethod
     def display(cls):
@@ -54,10 +60,15 @@ class Line:
 
     @classmethod
     def load(cls):
-        with open(LINES_FILE, "r", newline=NEWLINE) as file:
-            reader = csv.DictReader(file, delimiter=DELIMITER)
-            for row in reader:
-                cls.lines.append(Line(row["name"], row["stations"].split(LIST_DELIMITER)))
+        try:
+            with open(LINES_FILE, "r", newline=NEWLINE) as file:
+                reader = csv.DictReader(file, delimiter=DELIMITER)
+                for row in reader:
+                    cls.lines.append(Line(row["name"], list(map(int, row["stations"].split(LIST_DELIMITER)))))
+        except csv.Error:
+            print(f'{LINES_FILE} does not exist or is corrupted!')
+            time.sleep(DELAY)
+            close()
 
 
 class Ticket:
@@ -74,10 +85,15 @@ class Ticket:
                 
     @classmethod
     def load(cls):
-        with open(TICKETS_FILE, "r") as file:
-            reader = csv.DictReader(file, delimiter=DELIMITER)
-            for row in reader:
-                cls.tickets.append(Ticket(row["uid"], int(row["start_uid"]), int(row["stop_uid"])))
+        try:
+            with open(TICKETS_FILE, "r") as file:
+                reader = csv.DictReader(file, delimiter=DELIMITER)
+                for row in reader:
+                    cls.tickets.append(Ticket(row["uid"], int(row["start_uid"]), int(row["stop_uid"])))
+        except csv.Error:
+            print(f'{TICKETS_FILE} does not exist or is corrupted!')
+            time.sleep(DELAY)
+            close()
 
     @classmethod
     def calc_price(cls, start_uid: int, stop_uid: int):
@@ -100,11 +116,17 @@ class Ticket:
 
     @classmethod
     def save(cls):
-        with open(TICKETS_FILE, "w", newline=NEWLINE) as file:
-            writer = csv.writer(file, delimiter=DELIMITER)
-            writer.writerow(["uid", "start_uid", "stop_uid"])
-            for ticket in cls.tickets:
-                writer.writerow([ticket, ticket.start_uid, ticket.stop_uid])
+        try:
+            with open(TICKETS_FILE, "w", newline=NEWLINE) as file:
+                writer = csv.writer(file, delimiter=DELIMITER)
+                writer.writerow(["uid", "start_uid", "stop_uid"])
+                for ticket in cls.tickets:
+                    writer.writerow([ticket, ticket.start_uid, ticket.stop_uid])
+        except csv.Error:
+            print(f'Error writing to {TICKETS_FILE}')
+            time.sleep(DELAY)
+            os.system('cls' if os.name == 'nt' else 'clear')
+            os._exit(0)
 
     @staticmethod
     def create_uid() -> str:
@@ -139,7 +161,7 @@ def buy():
             break
         except ValueError:
             print("Not a valid Station ID!\nTry Again...")
-            time.sleep(2)
+            time.sleep(DELAY)
             continue
     while True:
         os.system('cls' if os.name == 'nt' else 'clear')
@@ -151,11 +173,11 @@ def buy():
             break
         except ValueError:
             print("Not a valid Station ID!\nTry Again...")
-            time.sleep(2)
+            time.sleep(DELAY)
             continue
     if start_uid == stop_uid:
             print("Start and Destination cannot be the same!\nTry Again...")
-            time.sleep(2)
+            time.sleep(DELAY)
             return
     price = Ticket.calc_price(start_uid, stop_uid)
     while True:
@@ -172,15 +194,13 @@ def buy():
                 raise ValueError
         except ValueError:
             print("Error!\nTry again...")
-            time.sleep(2)
+            time.sleep(DELAY)
             continue
-    
 
 def view():
     os.system('cls' if os.name == 'nt' else 'clear')
     Ticket.display()
     input("Press enter to finish viewing...")
-
 
 menu = {
     1: view,
@@ -188,7 +208,6 @@ menu = {
     3: remove,
     0: close
 }
-
 
 def main():
     Station.load()
@@ -203,7 +222,7 @@ def main():
                 raise ValueError
         except ValueError:
             print("Not a valid option!\nTry Again...")
-            time.sleep(2)
+            time.sleep(DELAY)
             continue
         func = menu.get(choice)
         if func:
