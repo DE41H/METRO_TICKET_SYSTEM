@@ -44,7 +44,7 @@ class Station:
             print(f'[{station}]: {cls.stations[station].name}')
 
     @classmethod
-    def from_uid(cls, uid: int) -> str:
+    def from_uid(cls, uid: int):
         return cls.stations[int(uid)]
 
 
@@ -83,6 +83,9 @@ class Ticket:
 
     def __repr__(self):
         return self.uid
+    
+    def routing(self):
+        pass        
                 
     @classmethod
     def load(cls):
@@ -95,11 +98,7 @@ class Ticket:
             print(f'Error loading {TICKETS_FILE}!')
             time.sleep(DELAY)
             sys.exit(1)
-
-    @classmethod
-    def calc_price(cls, start_uid: int, stop_uid: int):
-        pass
-
+    
     @classmethod
     def buy(cls, start_uid: int, stop_uid: int):
         cls.tickets.append(Ticket(cls.create_uid(), start_uid, stop_uid))
@@ -179,11 +178,11 @@ def buy():
             print("Start and Destination cannot be the same!\nTry Again...")
             time.sleep(DELAY)
             return
-    price = Ticket.calc_price(start_uid, stop_uid)
+    price = 10
     while True:
         os.system('cls' if os.name == 'nt' else 'clear')
         try:
-            print(f'Start: {Station.from_uid(start_uid)}\nDestination: {Station.from_uid(stop_uid)}\nThe price will be {price}$')
+            print(f'Start: {Station.from_uid(start_uid)}\nDestination: {Station.from_uid(stop_uid)}\nThe price will be ${price}')
             choice = input("Do you wish to purchase this ticket? (y/n)\n").lower()
             if choice == "y":
                 Ticket.buy(start_uid, stop_uid)
@@ -215,7 +214,7 @@ def main():
     Ticket.load()
     while True:
         os.system('cls' if os.name == 'nt' else 'clear')
-        print("MAIN MENU\n--------------\n[1] => View your tickets\n[2] => Buy tickets\n[3] => Remove tickets\n[0] => Exit")
+        print("MAIN MENU\n--------------\n[1] => View tickets\n[2] => Buy tickets\n[3] => Remove tickets\n[0] => Exit")
         try:
             choice = int(input("Enter Option ID: "))
             if choice not in menu:
