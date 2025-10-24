@@ -7,7 +7,8 @@ import base64
 STATIONS_FILE = "stations.csv"
 LINES_FILE = "lines.csv"
 TICKETS_FILE = "tickets.csv"
-DELIMITER = "$"
+DELIMITER = ","
+LIST_DELIMITER = "$"
 NEWLINE = ""
 
 
@@ -28,7 +29,7 @@ class Station:
         with open(STATIONS_FILE, "r", newline=NEWLINE) as file:
             reader = csv.DictReader(file, delimiter=DELIMITER)
             for row in reader:
-                cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"], row["neighbours"].split("$"))
+                cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"], row["neighbours"].split(LIST_DELIMITER))
 
     @classmethod
     def display(cls):
@@ -36,8 +37,8 @@ class Station:
             print(f'[{station}]: {cls.stations[station].name}')
 
     @classmethod
-    def name_from_uid(cls, uid: int):
-        return cls.stations[int(uid)].name
+    def name_from_uid(cls, uid: int) -> str:
+        return cls.stations[int(uid)]
 
 
 class Line:
@@ -54,9 +55,9 @@ class Line:
     @classmethod
     def load(cls):
         with open(LINES_FILE, "r", newline=NEWLINE) as file:
-            reader = csv.DictReader(file, delimiter = DELIMITER)
+            reader = csv.DictReader(file, delimiter=DELIMITER)
             for row in reader:
-                cls.lines.append(Line(row["name"], row["stations"].split("$")))
+                cls.lines.append(Line(row["name"], row["stations"].split(LIST_DELIMITER)))
 
 
 class Ticket:
@@ -74,7 +75,7 @@ class Ticket:
     @classmethod
     def load(cls):
         with open(TICKETS_FILE, "r") as file:
-            reader = csv.DictReader(file, delimiter = DELIMITER)
+            reader = csv.DictReader(file, delimiter=DELIMITER)
             for row in reader:
                 cls.tickets.append(Ticket(row["uid"], int(row["start_uid"]), int(row["stop_uid"])))
 
