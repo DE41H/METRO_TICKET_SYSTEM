@@ -14,46 +14,6 @@ NEWLINE = ""
 DELAY = 2
 
 
-class Tree:
-
-    def __init__(self, value) -> None:
-        self.value = value
-        self.children = []
-        self.parent: Tree
-
-    def __repr__(self) -> int:
-        return self.value
-    
-    @property
-    def gen(self):
-        arr: list = []
-        current = self
-        while current.parent != None:
-            arr.append(current)
-            current = current.parent
-        return arr
-    
-    def add_child(self, value):
-        entry = Tree(value)
-        entry.parent = self
-        self.children.append(entry)
-
-    def add_children(self, values: list):
-        for value in values:
-            self.add_child(value)
-
-    def create_layer(self):
-        for neigbour in Station.from_uid(self.value).neighbours:
-            if neigbour not in self.gen:
-                self.add_child(neigbour)
-
-    def search_layer(self, value):
-        for node in self.parent.children:
-            if node == value:
-                return node
-
-
-
 class Station:
     
     stations: dict = {}
@@ -125,9 +85,6 @@ class Ticket:
     def __repr__(self):
         return self.uid
     
-    def routing(self):
-        pass
-                
     @classmethod
     def load(cls):
         try:
