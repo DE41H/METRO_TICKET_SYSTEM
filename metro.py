@@ -9,34 +9,20 @@ class Station:
     
     stations: dict = {}
 
-    def __init__(self, uid: int):
-        self.uid = uid
+    def __init__(self, uid: int, name: str, neighbours: list):
+        self.uid: int = uid
+        self.name: str = name
+        self.neighbours: list = neighbours
 
     def __repr__(self) -> str:
         return str(self.name)
 
-    @property
-    def name(self):
-        with open("stations.csv", "r", newline="") as file:
-            reader = csv.DictReader(file, delimiter=",")
-            for row in reader:
-                if int(row["uid"]) == self.uid:
-                    return row["name"]
-                
-    @property
-    def neighbours(self):
-        with open("stations.csv", "r", newline="") as file:
-            reader = csv.DictReader(file, delimiter=",")
-            for row in reader:
-                if int(row["uid"]) == self.uid:
-                    return row["neighbours"].split("$")
-                
     @classmethod
     def load(cls):
         with open("stations.csv", "r", newline="") as file:
             reader = csv.DictReader(file, delimiter=",")
             for row in reader:
-                cls.stations[int(row["uid"])] = Station(int(row["uid"]))
+                cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"], row["neighbours"].split("$"))
 
     @classmethod
     def display(cls):
@@ -52,74 +38,51 @@ class Line:
 
     lines: list = []
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, stations: list):
         self.name = name
+        self.stations: list = stations
 
     def __repr__(self):
         return self.name
-                
-    @property
-    def stations(self) -> list:
-        with open("lines.csv", "r", newline="") as file:
-            reader = csv.DictReader(file, delimiter = ",")
-            for row in reader:
-                if row["name"] == self.name:
-                    return row["stations"].split("$")
-            else:
-                return []
 
     @classmethod
     def load(cls):
         with open("lines.csv", "r", newline="") as file:
             reader = csv.DictReader(file, delimiter = ",")
             for row in reader:
-                cls.lines.append(Line(row["name"]))
+                cls.lines.append(Line(row["name"], row["stations"].split("$")))
 
 
 class Ticket:
 
     tickets: list = []
 
-    def __init__(self, uid):
+    def __init__(self, uid, start_uid, stop_uid):
         self.uid = uid
+        self.start_uid: int = start_uid
+        self.stop_uid: int = stop_uid
 
     def __repr__(self):
         return self.uid
-
-    @property
-    def start_uid(self):
-        with open("tickets.csv", "r", newline="") as file:
-            reader = csv.DictReader(file, delimiter = ",")
-            for row in reader:
-                if row["uid"] == self.uid:
-                    return row["start_uid"]
-                
-    @property
-    def stop_uid(self):
-        with open("tickets.csv", "r") as file:
-            reader = csv.DictReader(file, delimiter = ",")
-            for row in reader:
-                if row["uid"] == self.uid:
-                    return row["stop_uid"]
                 
     @classmethod
     def load(cls):
         with open("tickets.csv", "r") as file:
             reader = csv.DictReader(file, delimiter = ",")
             for row in reader:
-                cls.tickets.append(Ticket(row["uid"]))
+                cls.tickets.append(Ticket(row["uid"], int(row["start_uid"]), int(row["stop_uid"])))
 
     @classmethod
     def calc_price(cls, start_uid: int, stop_uid: int):
         pass
 
     @classmethod
-    def buy(cls, start_uid: int, stop_uid: int, newline=""):
+    def buy(cls, start_uid: int, stop_uid: int):
         ticket = [cls.create_uid(), start_uid, stop_uid]
         with open("tickets.csv", "a", newline="") as file:
             writer = csv.writer(file, delimiter=",")
             writer.writerow(ticket)
-        cls.tickets.append(Ticket(ticket[0]))
+        cls.tickets.append(Ticket(ticket[0], ticket[1], ticket[2]))
             
     @classmethod
     def display(cls):
