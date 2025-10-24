@@ -14,6 +14,46 @@ NEWLINE = ""
 DELAY = 2
 
 
+class Tree:
+
+    def __init__(self, value) -> None:
+        self.value = value
+        self.children = []
+        self.parent: Tree
+
+    def __repr__(self) -> int:
+        return self.value
+    
+    @property
+    def gen(self):
+        arr: list = []
+        current = self
+        while current.parent != None:
+            arr.append(current)
+            current = current.parent
+        return arr
+    
+    def add_child(self, value):
+        entry = Tree(value)
+        entry.parent = self
+        self.children.append(entry)
+
+    def add_children(self, values: list):
+        for value in values:
+            self.add_child(value)
+
+    def create_layer(self):
+        for neigbour in Station.from_uid(self.value).neighbours:
+            if neigbour not in self.gen:
+                self.add_child(neigbour)
+
+    def search_layer(self, value):
+        for node in self.parent.children:
+            if node == value:
+                return node
+
+
+
 class Station:
     
     stations: dict = {}
@@ -80,12 +120,13 @@ class Ticket:
         self.uid = uid
         self.start_uid: int = start_uid
         self.stop_uid: int = stop_uid
+        self.path = []
 
     def __repr__(self):
         return self.uid
     
     def routing(self):
-        pass        
+        pass
                 
     @classmethod
     def load(cls):
@@ -98,7 +139,7 @@ class Ticket:
             print(f'Error loading {TICKETS_FILE}!')
             time.sleep(DELAY)
             sys.exit(1)
-    
+
     @classmethod
     def buy(cls, start_uid: int, stop_uid: int):
         cls.tickets.append(Ticket(cls.create_uid(), start_uid, stop_uid))
