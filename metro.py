@@ -56,7 +56,7 @@ class Menu:
             for number, option in self.options.items():
                 print(f'[{number}] >>> {option}')
             try:
-                choice = int(input("\nEnter Option ID: "))
+                choice: int = int(input("\nEnter Option ID: "))
                 if choice not in self.functions:
                     raise ValueError
             except ValueError:
@@ -71,6 +71,7 @@ class Menu:
         input("\nPress ENTER to finish viewing...")
         
     def buy_tickets(self) -> None:
+        Station.display()
         start_uid: int = self.input_station_id("starting")
         stop_uid: int = self.input_station_id("destination")
         while start_uid == stop_uid:
@@ -115,7 +116,6 @@ class Menu:
     @staticmethod
     def input_station_id(prompt: str) -> int:
         while True:
-            Station.display()
             try:
                 uid = int(input(f'Enter {prompt} Station ID: '))
                 if uid not in Station.stations:
@@ -142,7 +142,7 @@ class Station:
     def load(cls) -> None:
         try:
             with open(Config.STATIONS_FILE, "r", newline=Config.NEWLINE) as file:
-                reader = csv.DictReader(file, delimiter=Config.DELIMITER)
+                reader = list(csv.DictReader(file, delimiter=Config.DELIMITER))
                 for row in reader:
                     cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"], tuple())
                 for row in reader:
@@ -217,7 +217,8 @@ class Ticket:
 
     @classmethod
     def buy(cls, start_uid: int, stop_uid: int) -> None:
-        cls.tickets[cls.create_uid()] = Ticket(cls.create_uid(), start_uid, stop_uid)
+        uid: str = cls.create_uid()
+        cls.tickets[uid] = Ticket(uid, start_uid, stop_uid)
             
     @classmethod
     def display(cls) -> None:
