@@ -1,35 +1,129 @@
 from __future__ import annotations
 from typing import Callable
-import os
+
 import csv
 import sys
-import time
 import uuid
 
-STATIONS_FILE = "stations.csv"
-LINES_FILE = "lines.csv"
-TICKETS_FILE = "tickets.csv"
-DELIMITER = ","
-LIST_DELIMITER = "$"
-NEWLINE = ""
-DELAY = 2
 
+# class Node:
 
-class Node:
+#     depth: int = 0
+#     layer: list[Node] = []
 
-    depth: int = 0
-    layer: list[Node] = []
+#     def __init__(self, value: int) -> None:
+#         self.value: int = value
+#         self.children = []
+#         self.parent: Node
 
-    def __init__(self, value: int) -> None:
-        self.value: int = value
-        self.children = []
-        self.parent: Node
-
-    def __repr__(self) -> str:
-        return str(self.value)
+#     def __repr__(self) -> str:
+#         return str(self.value)
     
-    def add_child(self, child: Node) -> None:
-        pass
+#     def add_child(self, child: Node) -> None:
+#         pass
+
+
+class Config:
+
+    STATIONS_FILE: str = "stations.csv"
+    LINES_FILE: str = "lines.csv"
+    TICKETS_FILE: str = "tickets.csv"
+    DELIMITER: str = ","
+    LIST_DELIMITER: str = "$"
+    NEWLINE: str = ""
+    DELAY: int = 2
+
+
+class Menu:
+
+    functions: dict[int, Callable[[], None]]  = {}
+    options: dict[int, str] = {
+        1: "Purchase Tickets",
+        2: "View Tickets",
+        3: "Delete Tickets",
+        0: "Exit"
+    }
+
+    def __init__(self) -> None:
+        self.functions[1] = self.buy_tickets
+        self.functions[2] = self.view_tickets
+        self.functions[3] = self.remove_tickets
+        self.functions[0] = self.exit
+
+    def menu(self) -> None:
+        while True:
+            print("\n=============[ MAIN MENU ]=============\n")
+            for number, option in self.options.items():
+                print(f'[{number}] >>> {option}')
+            try:
+                choice = int(input("\nEnter Option ID: "))
+                if choice not in self.functions:
+                    raise ValueError
+            except ValueError:
+                print("Not a valid option!\nTry Again...")
+                continue
+            func = self.functions.get(choice)
+            if func:
+                func()
+    
+    def view_tickets(self) -> None:
+        Ticket.display()
+        input("\nPress ENTER to finish viewing...")
+        
+    def buy_tickets(self) -> None:
+        start_uid: int = self.input_station_id("starting")
+        stop_uid: int = self.input_station_id("destination")
+        while start_uid == stop_uid:
+            print("Starting and Destination cannot be the same!\nTry Again...")
+            stop_uid: int = self.input_station_id("destination")
+            continue
+        self.confirm_purchase(start_uid, stop_uid)
+    
+    @staticmethod
+    def confirm_purchase(start_uid: int, stop_uid: int) -> None:
+        price: int = 10
+        while True:
+            try:
+                print(f'Starting: {Station.from_uid(start_uid)}\nDestination: {Station.from_uid(stop_uid)}\nPrice: ${price}')
+                choice = input("Do you wish to purchase this ticket? (y/n)\n").strip().lower()
+                match choice:
+                    case "y":
+                        Ticket.buy(start_uid, stop_uid)
+                        return
+                    case "n":
+                        return
+                    case _:
+                        raise ValueError
+            except ValueError:
+                print("Error!\nTry again...")
+                continue
+
+    @staticmethod
+    def remove_tickets() -> None:
+        Ticket.display()
+        choice: str = input("Enter Ticket ID: ")
+        if Ticket.remove(choice):
+            print(f'Ticket with ID: {choice} has been deleted!')
+        else:
+            print("Invalid Ticket ID!")
+
+    @staticmethod
+    def exit() -> None:
+        Ticket.save()
+        sys.exit(0)
+
+    @staticmethod
+    def input_station_id(prompt: str) -> int:
+        while True:
+            Station.display()
+            try:
+                uid = int(input(f'Enter {prompt} Station ID: '))
+                if uid not in Station.stations:
+                    raise ValueError
+                return uid
+            except ValueError:
+                print("Not a valid Station ID!\nTry Again...")
+                continue
 
 
 class Station:
@@ -47,27 +141,29 @@ class Station:
     @classmethod
     def load(cls) -> None:
         try:
-            with open(STATIONS_FILE, "r", newline=NEWLINE) as file:
-                reader = csv.DictReader(file, delimiter=DELIMITER)
+            with open(Config.STATIONS_FILE, "r", newline=Config.NEWLINE) as file:
+                reader = csv.DictReader(file, delimiter=Config.DELIMITER)
                 for row in reader:
-                    cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"], tuple(map(cls.from_uid, map(int, row["neighbours"].split(LIST_DELIMITER)))))
-        except (FileNotFoundError, IOError, csv.Error, KeyError):
-            print(f'Error loading {STATIONS_FILE}!')
-            time.sleep(DELAY)
-            sys.exit(0)
+                    cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"], tuple())
+                for row in reader:
+                    cls.stations[int(row["uid"])].neighbours = cls.from_str(row["neighbours"])
+        except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
+            print(f'Error loading {Config.STATIONS_FILE}: {err}')
+            Menu.exit()
 
     @classmethod
     def display(cls) -> None:
-        for station in cls.stations:
-            print(f'[{station}]: {cls.stations[station].name}')
+        for uid, station in cls.stations.items():
+            print(f'[{uid}]: {station.name}')
 
     @classmethod
     def from_uid(cls, uid: int) -> Station:
         return cls.stations[int(uid)]
-
+    
     @classmethod
-    def display_map(cls) -> None:
-        pass
+    def from_str(cls, prompt: str) -> tuple[Station, ...]:
+        arr: list[int] = [int(item) for item in prompt.split("$")]
+        return tuple([cls.from_uid(item) for item in arr])
 
 
 class Line:
@@ -84,21 +180,20 @@ class Line:
     @classmethod
     def load(cls) -> None:
         try:
-            with open(LINES_FILE, "r", newline=NEWLINE) as file:
-                reader = csv.DictReader(file, delimiter=DELIMITER)
+            with open(Config.LINES_FILE, "r", newline=Config.NEWLINE) as file:
+                reader = csv.DictReader(file, delimiter=Config.DELIMITER)
                 temp: list[Line] = []
                 for row in reader:
-                    temp.append(Line(row["name"], tuple(map(Station.from_uid, map(int, row["stations"].split(LIST_DELIMITER))))))
+                    temp.append(Line(row["name"], Station.from_str(row["stations"])))
                 cls.lines = tuple(temp)
-        except (FileNotFoundError, IOError, csv.Error, KeyError):
-            print(f'Error loading {LINES_FILE}!')
-            time.sleep(DELAY)
-            sys.exit(0)
+        except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
+            print(f'Error loading {Config.LINES_FILE}: {err}')
+            Menu.exit()
 
 
 class Ticket:
 
-    tickets: set[Ticket] = set()
+    tickets: dict[str, Ticket] = {}
 
     def __init__(self, uid: str, start_uid: int, stop_uid: int) -> None:
         self.uid: str = uid
@@ -112,150 +207,55 @@ class Ticket:
     @classmethod
     def load(cls) -> None:
         try:
-            with open(TICKETS_FILE, "r") as file:
-                reader = csv.DictReader(file, delimiter=DELIMITER)
-                temp: list[Ticket] = []
+            with open(Config.TICKETS_FILE, "r") as file:
+                reader = csv.DictReader(file, delimiter=Config.DELIMITER)
                 for row in reader:
-                    temp.append(Ticket(row["uid"], int(row["start_uid"]), int(row["stop_uid"])))
-                cls.tickets = set(temp)
-        except (FileNotFoundError, IOError, csv.Error, KeyError):
-            print(f'Error loading {TICKETS_FILE}!')
-            time.sleep(DELAY)
-            sys.exit(0)
+                    cls.tickets[row["uid"]] = Ticket(row["uid"], int(row["start_uid"]), int(row["stop_uid"]))
+        except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
+            print(f'Error loading {Config.TICKETS_FILE}: {err}')
+            Menu.exit()
 
     @classmethod
     def buy(cls, start_uid: int, stop_uid: int) -> None:
-        cls.tickets.add(Ticket(cls.create_uid(), start_uid, stop_uid))
+        cls.tickets[cls.create_uid()] = Ticket(cls.create_uid(), start_uid, stop_uid)
             
     @classmethod
     def display(cls) -> None:
-        for ticket in cls.tickets:
-            print(f'[{ticket.uid}]: {Station.from_uid(ticket.start_uid)} => {Station.from_uid(ticket.stop_uid)}')
+        for uid, ticket in cls.tickets.items():
+            print(f'[{uid}]: {Station.from_uid(ticket.start_uid)} => {Station.from_uid(ticket.stop_uid)}')
     
     @classmethod
-    def remove(cls, uid: str) -> None:
-        for ticket in cls.tickets:
-            if ticket.uid == uid:
-                cls.tickets.remove(ticket)
+    def remove(cls, uid: str) -> bool:
+        if uid in cls.tickets:
+            cls.tickets.pop(uid)
+            return True
+        else:
+            return False
 
     @classmethod
     def save(cls) -> None:
         try:
-            with open(TICKETS_FILE, "w", newline=NEWLINE) as file:
-                writer = csv.writer(file, delimiter=DELIMITER)
+            with open(Config.TICKETS_FILE, "w", newline=Config.NEWLINE) as file:
+                writer = csv.writer(file, delimiter=Config.DELIMITER)
                 writer.writerow(["uid", "start_uid", "stop_uid"])
-                for ticket in cls.tickets:
-                    writer.writerow([ticket.uid, ticket.start_uid, ticket.stop_uid])
-        except (FileNotFoundError, IOError, csv.Error, KeyError):
-            print(f'Error writing to {TICKETS_FILE}!')
-            time.sleep(DELAY)
-            sys.exit(0)
+                for uid, ticket in cls.tickets.items():
+                    writer.writerow([uid, ticket.start_uid, ticket.stop_uid])
+        except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
+            print(f'Error writing to {Config.TICKETS_FILE}: {err}')
+            Menu.exit()
 
     @staticmethod
     def create_uid() -> str:
         uid: uuid.UUID = uuid.uuid4()
         return uid.hex
 
-def clear():
-    os.system('cls' if os.name == 'nt' else 'clear')
-
-def close():
-    Ticket.save()
-    clear()
-    sys.exit(0)
-
-def remove():
-    clear()
-    Ticket.display()
-    choice: str = input("Enter the ID of the ticket to remove: ")
-    Ticket.remove(choice)
-    print(f'Ticket with ID: {choice} has been deleted!')
-
-def buy():
-    start_uid: int
-    stop_uid: int
-    while True:
-        clear()
-        Station.display()
-        try:
-            start_uid = int(input("Enter starting Station ID: "))
-            if start_uid not in Station.stations.keys():
-                raise ValueError
-            break
-        except ValueError:
-            print("Not a valid Station ID!\nTry Again...")
-            time.sleep(DELAY)
-            continue
-    while True:
-        clear()
-        Station.display()
-        try:
-            stop_uid = int(input("Enter destination Station ID: "))
-            if stop_uid not in Station.stations.keys():
-                raise ValueError
-            break
-        except ValueError:
-            print("Not a valid Station ID!\nTry Again...")
-            time.sleep(DELAY)
-            continue
-    if start_uid == stop_uid:
-            print("Start and Destination cannot be the same!\nTry Again...")
-            time.sleep(DELAY)
-            return
-    price = 10
-    while True:
-        clear()
-        try:
-            print(f'Start: {Station.from_uid(start_uid)}\nDestination: {Station.from_uid(stop_uid)}\nThe price will be ${price}')
-            choice = input("Do you wish to purchase this ticket? (y/n)\n").lower()
-            if choice == "y":
-                Ticket.buy(start_uid, stop_uid)
-                return
-            elif choice == "n":
-                return
-            else:
-                raise ValueError
-        except ValueError:
-            print("Error!\nTry again...")
-            time.sleep(DELAY)
-            continue
-
-def view():
-    clear()
-    Ticket.display()
-    input("Press enter to finish viewing...")
-
-def view_map():
-    clear()
-    Station.display_map()
-    input("Press enter to finish viewing...")
-
-menu: dict[int, Callable[[], None]] = {
-    1: view,
-    2: buy,
-    3: remove,
-    4: view_map,
-    0: close
-}
 
 def main():
     Station.load()
     Line.load()
     Ticket.load()
-    while True:
-        clear()
-        print("MAIN MENU\n--------------\n[1] => View tickets\n[2] => Buy tickets\n[3] => Remove tickets\n[4] => Station Map\n[0] => Exit")
-        try:
-            choice = int(input("Enter Option ID: "))
-            if choice not in menu:
-                raise ValueError
-        except ValueError:
-            print("Not a valid option!\nTry Again...")
-            time.sleep(DELAY)
-            continue
-        func = menu.get(choice)
-        if func:
-            func()
+    menu: Menu = Menu()
+    menu.menu()
 
 if __name__ == "__main__":
     main()
