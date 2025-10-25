@@ -1,26 +1,54 @@
 from __future__ import annotations
 from typing import Callable
 
-import csv
+import os
 import sys
+import csv
 import uuid
+from collections import deque
 
 
-# class Node:
+class Node:
 
-#     depth: int = 0
-#     layer: list[Node] = []
+    layer: deque[Node] = deque()
 
-#     def __init__(self, value: int) -> None:
-#         self.value: int = value
-#         self.children = []
-#         self.parent: Node
+    def __init__(self, value: Station) -> None:
+        self.value: Station = value
+        self.children: set[Node] = set()
+        self.parent: Node
 
-#     def __repr__(self) -> str:
-#         return str(self.value)
+    def __repr__(self) -> str:
+        return str(self.value)
     
-#     def add_child(self, child: Node) -> None:
-#         pass
+    @property
+    def gen(self) -> list[Node]:
+        alpha: list[Node] = []
+        root: Node = self
+        while root.parent:
+            alpha.append(self)
+            root = root.parent
+        return alpha
+    
+    def add_child(self, value: Station) -> None:
+        self.children.add(Node(value))
+
+    @classmethod
+    def create_layer(cls) -> None:
+        temp: list[Node] = []
+        while cls.layer:
+            node = cls.layer.popleft()
+            for neighbour in node.value.neighbours:
+                node.add_child(neighbour)
+                temp.append(Node(neighbour))
+        cls.layer.extend(temp)
+
+    @classmethod
+    def search_layer(cls, uid: int) -> Node:
+        for node in cls.layer:
+            if node.value.uid == uid:
+                return node
+        else:
+            return None # type: ignore
 
 
 class Config:
@@ -52,6 +80,7 @@ class Menu:
 
     def menu(self) -> None:
         while True:
+            self.clear()
             print("\n=============[ MAIN MENU ]=============\n")
             for number, option in self.options.items():
                 print(f'[{number}] >>> {option}')
@@ -67,26 +96,31 @@ class Menu:
                 func()
     
     def view_tickets(self) -> None:
+        self.clear()
+        print("\n=============[ TICKET VIEWING ]=============\n")
         Ticket.display()
         input("\nPress ENTER to finish viewing...")
         
     def buy_tickets(self) -> None:
+        self.clear()
+        print("\n=============[ TICKET PURCHASE ]=============\n")
         Station.display()
+        print()
         start_uid: int = self.input_station_id("starting")
         stop_uid: int = self.input_station_id("destination")
         while start_uid == stop_uid:
-            print("Starting and Destination cannot be the same!\nTry Again...")
+            print("\nStarting and Destination cannot be the same!\nTry Again...\n")
             stop_uid: int = self.input_station_id("destination")
             continue
         self.confirm_purchase(start_uid, stop_uid)
     
-    @staticmethod
-    def confirm_purchase(start_uid: int, stop_uid: int) -> None:
-        price: int = 10
+    def confirm_purchase(self, start_uid: int, stop_uid: int) -> None:
+        print("\n=============[ CONFIRMATION ]=============\n")
+        price: int = len(Station.__sub__(Station.from_uid(stop_uid), Station.from_uid(start_uid))) * 100
         while True:
             try:
                 print(f'Starting: {Station.from_uid(start_uid)}\nDestination: {Station.from_uid(stop_uid)}\nPrice: ${price}')
-                choice = input("Do you wish to purchase this ticket? (y/n)\n").strip().lower()
+                choice = input("Purchase this ticket? (y/n)\n").strip().lower()
                 match choice:
                     case "y":
                         Ticket.buy(start_uid, stop_uid)
@@ -96,17 +130,18 @@ class Menu:
                     case _:
                         raise ValueError
             except ValueError:
-                print("Error!\nTry again...")
+                print("\nError!\nTry again...")
                 continue
 
-    @staticmethod
-    def remove_tickets() -> None:
+    def remove_tickets(self) -> None:
+        self.clear()
+        print("\n=============[ TICKET REMOVAL ]=============\n")
         Ticket.display()
-        choice: str = input("Enter Ticket ID: ")
+        choice: str = input("\nEnter Ticket ID: ")
         if Ticket.remove(choice):
-            print(f'Ticket with ID: {choice} has been deleted!')
+            print(f'\nTicket with ID: {choice} has been deleted!')
         else:
-            print("Invalid Ticket ID!")
+            print("\nInvalid Ticket ID!")
 
     @staticmethod
     def exit() -> None:
@@ -122,8 +157,12 @@ class Menu:
                     raise ValueError
                 return uid
             except ValueError:
-                print("Not a valid Station ID!\nTry Again...")
+                print("\nNot a valid Station ID!\nTry Again...\n")
                 continue
+    
+    @staticmethod
+    def clear():
+        os.system('cls' if os.name == 'nt' else 'clear')
 
 
 class Station:
@@ -137,6 +176,17 @@ class Station:
 
     def __repr__(self) -> str:
         return self.name
+    
+    def __sub__(self, other: Station) -> tuple[Station, ...]:
+        search: list[Node] = []
+        while not search:
+            root: Node = Node(self)
+            root.create_layer()
+            item = root.search_layer(other.uid)
+            if item:
+                search = item.gen
+        search.reverse()
+        return tuple([item.value for item in search])
 
     @classmethod
     def load(cls) -> None:
@@ -154,7 +204,7 @@ class Station:
     @classmethod
     def display(cls) -> None:
         for uid, station in cls.stations.items():
-            print(f'[{uid}]: {station.name}')
+            print(f'[{uid}] >>> {station.name}')
 
     @classmethod
     def from_uid(cls, uid: int) -> Station:
@@ -199,7 +249,7 @@ class Ticket:
         self.uid: str = uid
         self.start_uid: int = start_uid
         self.stop_uid: int = stop_uid
-        self.path = []
+        self.path = Station.from_uid(stop_uid) - Station.from_uid(start_uid)
 
     def __repr__(self) -> str:
         return self.uid
@@ -223,7 +273,7 @@ class Ticket:
     @classmethod
     def display(cls) -> None:
         for uid, ticket in cls.tickets.items():
-            print(f'[{uid}]: {Station.from_uid(ticket.start_uid)} => {Station.from_uid(ticket.stop_uid)}')
+            print(f'[{uid}] >>> {Station.from_uid(ticket.start_uid)} => {Station.from_uid(ticket.stop_uid)}')
     
     @classmethod
     def remove(cls, uid: str) -> bool:
