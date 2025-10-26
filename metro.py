@@ -10,8 +10,6 @@ from collections import deque
 
 class Node:
 
-    layer: deque[Node] = deque()
-
     def __init__(self, value: Station) -> None:
         self.value: Station = value
         self.children: set[Node] = set()
@@ -20,35 +18,29 @@ class Node:
     def __repr__(self) -> str:
         return str(self.value)
     
+    def __hash__(self) -> int:
+        return hash(self.value.uid)
+    
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Node) and self.value.uid == other.value.uid
+    
     @property
     def gen(self) -> list[Node]:
         alpha: list[Node] = []
         root: Node = self
-        while root.parent:
-            alpha.append(self)
-            root = root.parent
+        while True:
+            alpha.append(root)
+            try:
+                root = root.parent
+            except AttributeError:
+                break
         return alpha
     
-    def add_child(self, value: Station) -> None:
-        self.children.add(Node(value))
-
-    @classmethod
-    def create_layer(cls) -> None:
-        temp: list[Node] = []
-        while cls.layer:
-            node = cls.layer.popleft()
-            for neighbour in node.value.neighbours:
-                node.add_child(neighbour)
-                temp.append(Node(neighbour))
-        cls.layer.extend(temp)
-
-    @classmethod
-    def search_layer(cls, uid: int) -> Node:
-        for node in cls.layer:
-            if node.value.uid == uid:
-                return node
-        else:
-            return None # type: ignore
+    def add_child(self, value: Station) -> Node:
+        child = Node(value)
+        child.parent = self
+        self.children.add(child)
+        return child
 
 
 class Config:
@@ -64,15 +56,14 @@ class Config:
 
 class Menu:
 
-    functions: dict[int, Callable[[], None]]  = {}
-    options: dict[int, str] = {
-        1: "Purchase Tickets",
-        2: "View Tickets",
-        3: "Delete Tickets",
-        0: "Exit"
-    }
-
     def __init__(self) -> None:
+        self.functions: dict[int, Callable[[], None]]  = {}
+        self.options: dict[int, str] = {
+            1: "Purchase Tickets",
+            2: "View Tickets",
+            3: "Delete Tickets",
+            0: "Exit"
+        }
         self.functions[1] = self.buy_tickets
         self.functions[2] = self.view_tickets
         self.functions[3] = self.remove_tickets
@@ -116,10 +107,17 @@ class Menu:
     
     def confirm_purchase(self, start_uid: int, stop_uid: int) -> None:
         print("\n=============[ CONFIRMATION ]=============\n")
-        price: int = len(Station.__sub__(Station.from_uid(stop_uid), Station.from_uid(start_uid))) * 100
+        path: tuple[Station, ...] = Station.__sub__(Station.from_uid(start_uid), Station.from_uid(stop_uid))
+        price: int = (len(path) - 1) * 100
+        route: str = ""
+        for i in range(len(path)):
+            if i == 0:
+                route += path[i].name
+            else:
+                route += " => " + path[i].name
         while True:
             try:
-                print(f'Starting: {Station.from_uid(start_uid)}\nDestination: {Station.from_uid(stop_uid)}\nPrice: ${price}')
+                print(f'Starting: {Station.from_uid(start_uid)}\nDestination: {Station.from_uid(stop_uid)}\nRoute: {route}\nPrice: ${price}')
                 choice = input("Purchase this ticket? (y/n)\n").strip().lower()
                 match choice:
                     case "y":
@@ -162,7 +160,10 @@ class Menu:
     
     @staticmethod
     def clear():
-        os.system('cls' if os.name == 'nt' else 'clear')
+        try:
+            os.system('cls' if os.name == 'nt' else 'clear')
+        except Exception:
+            print("\033[H\033[J", end="")
 
 
 class Station:
@@ -178,28 +179,35 @@ class Station:
         return self.name
     
     def __sub__(self, other: Station) -> tuple[Station, ...]:
-        search: list[Node] = []
-        while not search:
-            root: Node = Node(self)
-            root.create_layer()
-            item = root.search_layer(other.uid)
-            if item:
-                search = item.gen
-        search.reverse()
-        return tuple([item.value for item in search])
+        visited: set[int] = {self.uid}
+        queue: deque[Node] = deque([Node(self)])
+        while queue:
+            node: Node = queue.popleft()
+            if node.value.uid == other.uid:
+                path: list[Node] = node.gen
+                path.reverse()
+                return tuple(item.value for item in path)
+            visited.add(node.value.uid)
+            for neighbour in node.value.neighbours:
+                if neighbour.uid not in visited:
+                    visited.add(neighbour.uid)
+                    queue.append(node.add_child(neighbour))
+        return tuple()
 
     @classmethod
     def load(cls) -> None:
         try:
+            temp: list[tuple[int, str]] = []
             with open(Config.STATIONS_FILE, "r", newline=Config.NEWLINE) as file:
-                reader = list(csv.DictReader(file, delimiter=Config.DELIMITER))
+                reader = csv.DictReader(file, delimiter=Config.DELIMITER)
                 for row in reader:
                     cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"], tuple())
-                for row in reader:
-                    cls.stations[int(row["uid"])].neighbours = cls.from_str(row["neighbours"])
+                    temp.append((int(row["uid"]), row["neighbours"]))
+                for temp_uid, temp_neighbours in temp:
+                    cls.stations[temp_uid].neighbours = cls.from_str(temp_neighbours)
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
-            print(f'Error loading {Config.STATIONS_FILE}: {err}')
-            Menu.exit()
+            Ticket.save()
+            raise RuntimeError(f'Error loading {Config.STATIONS_FILE}: {err}')
 
     @classmethod
     def display(cls) -> None:
@@ -237,8 +245,8 @@ class Line:
                     temp.append(Line(row["name"], Station.from_str(row["stations"])))
                 cls.lines = tuple(temp)
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
-            print(f'Error loading {Config.LINES_FILE}: {err}')
-            Menu.exit()
+            Ticket.save()
+            raise RuntimeError(f'Error loading {Config.LINES_FILE}: {err}')
 
 
 class Ticket:
@@ -262,8 +270,7 @@ class Ticket:
                 for row in reader:
                     cls.tickets[row["uid"]] = Ticket(row["uid"], int(row["start_uid"]), int(row["stop_uid"]))
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
-            print(f'Error loading {Config.TICKETS_FILE}: {err}')
-            Menu.exit()
+            raise RuntimeError(f'Error loading {Config.TICKETS_FILE}: {err}')
 
     @classmethod
     def buy(cls, start_uid: int, stop_uid: int) -> None:
@@ -292,13 +299,14 @@ class Ticket:
                 for uid, ticket in cls.tickets.items():
                     writer.writerow([uid, ticket.start_uid, ticket.stop_uid])
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
-            print(f'Error writing to {Config.TICKETS_FILE}: {err}')
-            Menu.exit()
+            raise RuntimeError(f'Error writing to {Config.TICKETS_FILE}: {err}')
 
     @staticmethod
     def create_uid() -> str:
-        uid: uuid.UUID = uuid.uuid4()
-        return uid.hex
+        uid: str = uuid.uuid4().hex
+        while uid in Ticket.tickets:
+            uid = uuid.uuid4().hex
+        return uid
 
 
 def main():
