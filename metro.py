@@ -87,7 +87,9 @@ class Menu:
         self.clear()
         print("\n=============[ TICKET VIEWING ]=============\n")
         Ticket.display()
-        input("\nPress ENTER to finish viewing...")
+        choice: str = input("\nEnter Ticket ID: ")
+        print(Line.guide(Ticket.tickets[choice].path))
+        input("Press ENTER to continue...")
         
     def buy_tickets(self) -> None:
         self.clear()
@@ -175,6 +177,9 @@ class Station:
     def __repr__(self) -> str:
         return self.name
     
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Station) and self.uid == other.uid
+    
     def __sub__(self, other: Station) -> tuple[Station, ...]:
         visited: set[int] = {self.uid}
         queue: deque[Node] = deque([Node(self)])
@@ -208,9 +213,9 @@ class Station:
 
     @classmethod
     def display(cls) -> None:
-        for line in Line.lines:
-            print(f'\n-------------- <{line.name}> --------------\n')
-            for station in line.stations:
+        for name, stations in Line.lines.items():
+            print(f'\n-------------- <{name}> --------------\n')
+            for station in stations:
                 print(f'  [{station.uid}] >>> {station.name}')
 
     @classmethod
@@ -225,27 +230,53 @@ class Station:
 
 class Line:
 
-    lines: tuple[Line, ...] = tuple()
-
-    def __init__(self, name: str, stations: tuple[Station, ...]) -> None:
-        self.name = name
-        self.stations: tuple[Station, ...] = stations
-
-    def __repr__(self) -> str:
-        return self.name
+    lines: dict[str, tuple[Station, ...]] = {}
 
     @classmethod
     def load(cls) -> None:
         try:
             with open(Config.LINES_FILE, "r", newline=Config.NEWLINE) as file:
                 reader = csv.DictReader(file, delimiter=Config.DELIMITER)
-                temp: list[Line] = []
                 for row in reader:
-                    temp.append(Line(row["name"], Station.from_str(row["stations"])))
-                cls.lines = tuple(temp)
+                    cls.lines[row["name"]] = Station.from_str(row["stations"])
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
             Ticket.save()
             raise RuntimeError(f'Error loading {Config.LINES_FILE}: {err}')
+        
+    @classmethod
+    def get_lines(cls, item: Station) -> list[str]:
+        lines: list[str] = []
+        for name, line in cls.lines.items():
+            for station in line:
+                if station == item:
+                    lines.append(name)
+        return lines
+
+    @classmethod
+    def get_line(cls, x: Station, y: Station) -> str:
+        x_lines: set[str] = set(cls.get_lines(x))
+        y_lines: set[str] = set(cls.get_lines(y))
+        intersection: set[str] = x_lines & y_lines
+        return intersection.pop()
+        
+    @classmethod
+    def guide(cls, path: tuple[Station, ...]) -> str:
+        instructions: str = ""
+        for i in range(len(path)):
+            if i == 0:
+                instructions += path[i].name
+            else:
+                if i < len(path) - 1:
+                    curr_line: str = cls.get_line(path[i], path[i - 1])
+                    next_line: str = cls.get_line(path[i], path[i + 1])
+                    instructions += " => " + path[i].name
+                    if not (curr_line == next_line):
+                        instructions += f'\nChange lines from {curr_line} to {next_line}...\n'
+                        instructions += path[i].name
+                else:
+                    instructions += " => " + path[i].name
+        instructions += "\n"
+        return instructions
 
 
 class Ticket:
@@ -261,6 +292,13 @@ class Ticket:
 
     def __repr__(self) -> str:
         return self.uid
+    
+    def detail(self) -> str:
+        details: str = ""
+        details += f'Ticket ID: {self.uid}\n'
+        details += f'Starting: {Station.from_uid(self.start_uid).name}\n'
+        details += f'Destination: {Station.from_uid(self.stop_uid).name}\n'
+        return details
     
     @classmethod
     def load(cls) -> None:
@@ -295,7 +333,7 @@ class Ticket:
         try:
             with open(Config.TICKETS_FILE, "w", newline=Config.NEWLINE) as file:
                 writer = csv.writer(file, delimiter=Config.DELIMITER)
-                writer.writerow(["uid", "start_uid", "stop_uid"])
+                writer.writerow(["uid", "start_uid", "stop_uid", "path"])
                 for uid, ticket in cls.tickets.items():
                     writer.writerow([uid, ticket.start_uid, ticket.stop_uid, str("$".join(str(item.uid) for item in ticket.path))])
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
