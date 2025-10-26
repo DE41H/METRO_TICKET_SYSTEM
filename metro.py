@@ -209,7 +209,7 @@ class Station:
     @classmethod
     def display(cls) -> None:
         for line in Line.lines:
-            print(f'\n------------ <{line.name}> ------------\n')
+            print(f'\n-------------- <{line.name}> --------------\n')
             for station in line.stations:
                 print(f'  [{station.uid}] >>> {station.name}')
 
@@ -297,7 +297,7 @@ class Ticket:
                 writer = csv.writer(file, delimiter=Config.DELIMITER)
                 writer.writerow(["uid", "start_uid", "stop_uid"])
                 for uid, ticket in cls.tickets.items():
-                    writer.writerow([uid, ticket.start_uid, ticket.stop_uid])
+                    writer.writerow([uid, ticket.start_uid, ticket.stop_uid, str("$".join(str(item.uid) for item in ticket.path))])
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
             raise RuntimeError(f'Error writing to {Config.TICKETS_FILE}: {err}')
 
