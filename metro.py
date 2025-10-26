@@ -12,7 +12,6 @@ class Node:
 
     def __init__(self, value: Station) -> None:
         self.value: Station = value
-        self.children: set[Node] = set()
         self.parent: Node
 
     def __repr__(self) -> str:
@@ -39,19 +38,17 @@ class Node:
     def add_child(self, value: Station) -> Node:
         child = Node(value)
         child.parent = self
-        self.children.add(child)
         return child
 
 
 class Config:
 
-    STATIONS_FILE: str = "stations.csv"
-    LINES_FILE: str = "lines.csv"
-    TICKETS_FILE: str = "tickets.csv"
+    STATIONS_FILE: str = "data/stations.csv"
+    LINES_FILE: str = "data/lines.csv"
+    TICKETS_FILE: str = "data/tickets.csv"
     DELIMITER: str = ","
     LIST_DELIMITER: str = "$"
     NEWLINE: str = ""
-    DELAY: int = 2
 
 
 class Menu:
@@ -121,7 +118,7 @@ class Menu:
                 choice = input("Purchase this ticket? (y/n)\n").strip().lower()
                 match choice:
                     case "y":
-                        Ticket.buy(start_uid, stop_uid)
+                        Ticket.buy(start_uid, stop_uid, path)
                         return
                     case "n":
                         return
@@ -211,8 +208,10 @@ class Station:
 
     @classmethod
     def display(cls) -> None:
-        for uid, station in cls.stations.items():
-            print(f'[{uid}] >>> {station.name}')
+        for line in Line.lines:
+            print(f'\n------------ <{line.name}> ------------\n')
+            for station in line.stations:
+                print(f'  [{station.uid}] >>> {station.name}')
 
     @classmethod
     def from_uid(cls, uid: int) -> Station:
@@ -253,11 +252,12 @@ class Ticket:
 
     tickets: dict[str, Ticket] = {}
 
-    def __init__(self, uid: str, start_uid: int, stop_uid: int) -> None:
+    def __init__(self, uid: str, start_uid: int, stop_uid: int, path: tuple[Station, ...]) -> None:
         self.uid: str = uid
         self.start_uid: int = start_uid
         self.stop_uid: int = stop_uid
-        self.path = Station.from_uid(stop_uid) - Station.from_uid(start_uid)
+        self.path: tuple[Station, ...] = path
+        self.price: int = (len(self.path) - 1) * 3
 
     def __repr__(self) -> str:
         return self.uid
@@ -268,14 +268,14 @@ class Ticket:
             with open(Config.TICKETS_FILE, "r") as file:
                 reader = csv.DictReader(file, delimiter=Config.DELIMITER)
                 for row in reader:
-                    cls.tickets[row["uid"]] = Ticket(row["uid"], int(row["start_uid"]), int(row["stop_uid"]))
+                    cls.tickets[row["uid"]] = Ticket(row["uid"], int(row["start_uid"]), int(row["stop_uid"]), Station.from_str(row["path"]))
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
             raise RuntimeError(f'Error loading {Config.TICKETS_FILE}: {err}')
 
     @classmethod
-    def buy(cls, start_uid: int, stop_uid: int) -> None:
+    def buy(cls, start_uid: int, stop_uid: int, path: tuple[Station, ...]) -> None:
         uid: str = cls.create_uid()
-        cls.tickets[uid] = Ticket(uid, start_uid, stop_uid)
+        cls.tickets[uid] = Ticket(uid, start_uid, stop_uid, path)
             
     @classmethod
     def display(cls) -> None:
@@ -310,9 +310,14 @@ class Ticket:
 
 
 def main():
-    Station.load()
-    Line.load()
-    Ticket.load()
+    try:
+        Station.load()
+        Line.load()
+        Ticket.load()
+    except RuntimeError as err:
+        print(f'Error: {err}')
+        return
+
     menu: Menu = Menu()
     menu.menu()
 
