@@ -95,7 +95,7 @@ class Menu:
     
     def view_tickets(self) -> None:
         print(f'{self.clear}{Config.ANSI["bold"]}=============[ TICKET VIEWING ]============={Config.ANSI["reset"]}')
-        Ticket.display()
+        print(Ticket.display())
         try:
             choice: str = input("\nEnter Ticket ID: ")
             if choice not in Ticket.tickets:
@@ -108,7 +108,7 @@ class Menu:
         
     def buy_tickets(self) -> None:
         print(f'{self.clear}{Config.ANSI["bold"]}=============[ TICKET PURCHASE ]============={Config.ANSI["reset"]}')
-        Station.display()
+        print(Station.display())
         print()
         start_uid: int = self.input_station_id("starting")
         if not start_uid:
@@ -152,7 +152,7 @@ class Menu:
 
     def remove_tickets(self) -> None:
         print(f'{self.clear}{Config.ANSI["bold"]}=============[ TICKET REMOVAL ]============={Config.ANSI["reset"]}')
-        Ticket.display()
+        print(Ticket.display())
         choice: str = input("\nEnter Ticket ID: ")
         if Ticket.remove(choice):
             print(f'\nTicket with ID: {choice} has been deleted!')
@@ -216,27 +216,29 @@ class Station:
     @classmethod
     def load(cls) -> None:
         try:
-            temp: list[tuple[int, str]] = []
+            temp: set[tuple[int, str]] = set()
             with open(Config.STATIONS_FILE, "r", newline=Config.NEWLINE) as file:
                 reader = csv.DictReader(file, delimiter=Config.DELIMITER)
                 for row in reader:
                     cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"])
-                    temp.append((int(row["uid"]), row["neighbours"]))
+                    temp.add((int(row["uid"]), row["neighbours"]))
                 for temp_uid, temp_neighbours in temp:
                     cls.stations[temp_uid].neighbours = frozenset(cls.split(temp_neighbours))
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
             raise RuntimeError(f'Error loading {Config.STATIONS_FILE}: {err}')
 
     @classmethod
-    def display(cls) -> None:
+    def display(cls) -> str:
+        out: str = ""
         for line, stations in Line.lines.items():
-            print(f'\n{Config.ANSI["underline"]}{line}\n{Config.ANSI["reset"]}')
+            out += f'\n{Config.ANSI["underline"]}{line}\n{Config.ANSI["reset"]}\n'
             for station in stations:
-                print(f' [{station.uid}] {station.name}')
+                out += f' [{station.uid}] {station.name}\n'
+        return out
 
     @classmethod
     def from_uid(cls, uid: int) -> Station:
-        return cls.stations[int(uid)]
+        return cls.stations[uid]
     
     @classmethod
     def exists(cls, name: str) -> int:
@@ -262,10 +264,10 @@ class Line:
             with open(Config.LINES_FILE, "r", newline=Config.NEWLINE) as file:
                 reader = csv.DictReader(file, delimiter=Config.DELIMITER)
                 for row in reader:
+                    cls.lines[row["name"]] = Station.split(row["stations"])
                     stations = Station.split(row["stations"])
                     for station in stations:
                         Station.stations[station.uid].lines.add(row["name"])
-                    cls.lines[row["name"]] = Station.split(row["stations"])
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
             raise RuntimeError(f'Error loading {Config.LINES_FILE}: {err}')
     
@@ -337,9 +339,11 @@ class Ticket:
         cls.tickets[uid] = Ticket(uid, start_uid, stop_uid, path)
             
     @classmethod
-    def display(cls) -> None:
+    def display(cls) -> str:
+        out: str = ""
         for uid, ticket in cls.tickets.items():
-            print(f'[{uid}] >>> {Station.from_uid(ticket.start_uid)} => {Station.from_uid(ticket.stop_uid)}')
+            out += f'[{uid}] >>> {Station.from_uid(ticket.start_uid)} => {Station.from_uid(ticket.stop_uid)}\n'
+        return out
     
     @classmethod
     def remove(cls, uid: str) -> bool:
