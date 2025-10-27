@@ -212,7 +212,6 @@ class Station:
     @classmethod
     def load(cls) -> None:
         try:
-
             temp: list[tuple[int, str]] = []
             with open(Config.STATIONS_FILE, "r", newline=Config.NEWLINE) as file:
                 reader = csv.DictReader(file, delimiter=Config.DELIMITER)
@@ -296,9 +295,6 @@ class Line:
 class Ticket:
 
     tickets: dict[str, Ticket] = {}
-    lower: list[str] = [chr(i) for i in range(ord("a"), ord("z") + 1)]
-    upper: list[str] = [chr(i) for i in range(ord("A"), ord("Z") + 1)]
-    num: list[str] = [str(i) for i in range(10)]
 
     def __init__(self, uid: str, start_uid: int, stop_uid: int, path: tuple[Station, ...]) -> None:
         self.uid: str = uid
