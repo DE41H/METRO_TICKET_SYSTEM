@@ -4,7 +4,7 @@ from typing import Callable
 import os
 import sys
 import csv
-import uuid
+import secrets
 from collections import deque
 
 
@@ -49,6 +49,7 @@ class Config:
     DELIMITER: str = ","
     LIST_DELIMITER: str = "$"
     NEWLINE: str = ""
+    PRICE_FACTOR: int = 3
 
 
 class Menu:
@@ -87,9 +88,15 @@ class Menu:
         self.clear()
         print("\n=============[ TICKET VIEWING ]=============\n")
         Ticket.display()
-        choice: str = input("\nEnter Ticket ID: ")
-        print(Line.guide(Ticket.tickets[choice].path))
-        input("Press ENTER to continue...")
+        try:
+            choice: str = input("\nEnter Ticket ID: ")
+            if choice not in Ticket.tickets:
+                raise Exception
+            Ticket.tickets[choice].detail()
+            print("\n" + Line.guide(Ticket.tickets[choice].path))
+            input("Press ENTER to continue...")
+        except Exception:
+            pass
         
     def buy_tickets(self) -> None:
         self.clear()
@@ -97,17 +104,23 @@ class Menu:
         Station.display()
         print()
         start_uid: int = self.input_station_id("starting")
+        if not start_uid:
+            return
         stop_uid: int = self.input_station_id("destination")
+        if not stop_uid:
+            return
         while start_uid == stop_uid:
             print("\nStarting and Destination cannot be the same!\nTry Again...\n")
             stop_uid: int = self.input_station_id("destination")
+            if not stop_uid:
+                return
             continue
         self.confirm_purchase(start_uid, stop_uid)
     
     def confirm_purchase(self, start_uid: int, stop_uid: int) -> None:
         print("\n=============[ CONFIRMATION ]=============\n")
         path: tuple[Station, ...] = Station.__sub__(Station.from_uid(start_uid), Station.from_uid(stop_uid))
-        price: int = (len(path) - 1) * 100
+        price: int = (len(path) - 1) * Config.PRICE_FACTOR
         route: str = ""
         for i in range(len(path)):
             if i == 0:
@@ -117,7 +130,7 @@ class Menu:
         while True:
             try:
                 print(f'Starting: {Station.from_uid(start_uid)}\nDestination: {Station.from_uid(stop_uid)}\nRoute: {route}\nPrice: ${price}')
-                choice = input("Purchase this ticket? (y/n)\n").strip().lower()
+                choice = input("\nPurchase this ticket? (y/n)\n").strip().lower()
                 match choice:
                     case "y":
                         Ticket.buy(start_uid, stop_uid, path)
@@ -148,14 +161,22 @@ class Menu:
     @staticmethod
     def input_station_id(prompt: str) -> int:
         while True:
-            try:
-                uid = int(input(f'Enter {prompt} Station ID: '))
-                if uid not in Station.stations:
-                    raise ValueError
-                return uid
-            except ValueError:
-                print("\nNot a valid Station ID!\nTry Again...\n")
-                continue
+            choice: str = input(f'Enter {prompt} Station ID: ')
+            if choice == "":
+                return 0
+            else:
+                try:
+                    uid: int = int(choice)
+                    if uid not in Station.stations:
+                        print("\nNot a valid Station!\nTry Again...\n")
+                        continue
+                    return uid
+                except ValueError:
+                    uid: int = Station.exists(choice)
+                    if not uid:
+                        print("\nNot a valid Station!\nTry Again...\n")
+                        continue
+                    return uid
     
     @staticmethod
     def clear():
@@ -169,10 +190,11 @@ class Station:
     
     stations: dict[int, Station] = {}
 
-    def __init__(self, uid: int, name: str, neighbours: tuple[Station, ...]) -> None:
+    def __init__(self, uid: int, name: str, neighbours: tuple[Station, ...], lines: tuple[str, ...]) -> None:
         self.uid: int = uid
         self.name: str = name
         self.neighbours: tuple[Station, ...] = neighbours
+        self.lines: tuple[str, ...] = lines
 
     def __repr__(self) -> str:
         return self.name
@@ -189,7 +211,6 @@ class Station:
                 path: list[Node] = node.gen
                 path.reverse()
                 return tuple(item.value for item in path)
-            visited.add(node.value.uid)
             for neighbour in node.value.neighbours:
                 if neighbour.uid not in visited:
                     visited.add(neighbour.uid)
@@ -203,12 +224,11 @@ class Station:
             with open(Config.STATIONS_FILE, "r", newline=Config.NEWLINE) as file:
                 reader = csv.DictReader(file, delimiter=Config.DELIMITER)
                 for row in reader:
-                    cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"], tuple())
+                    cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"], tuple(), tuple())
                     temp.append((int(row["uid"]), row["neighbours"]))
                 for temp_uid, temp_neighbours in temp:
                     cls.stations[temp_uid].neighbours = cls.from_str(temp_neighbours)
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
-            Ticket.save()
             raise RuntimeError(f'Error loading {Config.STATIONS_FILE}: {err}')
 
     @classmethod
@@ -221,6 +241,14 @@ class Station:
     @classmethod
     def from_uid(cls, uid: int) -> Station:
         return cls.stations[int(uid)]
+    
+    @classmethod
+    def exists(cls, name: str) -> int:
+        for uid, station in cls.stations.items():
+            if station.name.lower() == name.lower():
+                return uid
+        else:
+            return 0
     
     @classmethod
     def from_str(cls, prompt: str) -> tuple[Station, ...]:
@@ -238,9 +266,11 @@ class Line:
             with open(Config.LINES_FILE, "r", newline=Config.NEWLINE) as file:
                 reader = csv.DictReader(file, delimiter=Config.DELIMITER)
                 for row in reader:
+                    stations = Station.from_str(row["stations"])
+                    for station in stations:
+                        Station.stations[station.uid].lines = Station.stations[station.uid].lines + tuple(row["name"])
                     cls.lines[row["name"]] = Station.from_str(row["stations"])
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
-            Ticket.save()
             raise RuntimeError(f'Error loading {Config.LINES_FILE}: {err}')
         
     @classmethod
@@ -282,23 +312,26 @@ class Line:
 class Ticket:
 
     tickets: dict[str, Ticket] = {}
+    lower: list[str] = [chr(i) for i in range(ord("a"), ord("z") + 1)]
+    upper: list[str] = [chr(i) for i in range(ord("A"), ord("Z") + 1)]
+    num: list[str] = [str(i) for i in range(10)]
 
     def __init__(self, uid: str, start_uid: int, stop_uid: int, path: tuple[Station, ...]) -> None:
         self.uid: str = uid
         self.start_uid: int = start_uid
         self.stop_uid: int = stop_uid
         self.path: tuple[Station, ...] = path
-        self.price: int = (len(self.path) - 1) * 3
+        self.price: int = (len(self.path) - 1) * Config.PRICE_FACTOR
 
     def __repr__(self) -> str:
         return self.uid
     
-    def detail(self) -> str:
+    def detail(self) -> None:
         details: str = ""
         details += f'Ticket ID: {self.uid}\n'
         details += f'Starting: {Station.from_uid(self.start_uid).name}\n'
         details += f'Destination: {Station.from_uid(self.stop_uid).name}\n'
-        return details
+        print(details)
     
     @classmethod
     def load(cls) -> None:
@@ -339,15 +372,15 @@ class Ticket:
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
             raise RuntimeError(f'Error writing to {Config.TICKETS_FILE}: {err}')
 
-    @staticmethod
-    def create_uid() -> str:
-        uid: str = uuid.uuid4().hex
+    @classmethod
+    def create_uid(cls) -> str:
+        uid: str = secrets.token_urlsafe(6)
         while uid in Ticket.tickets:
-            uid = uuid.uuid4().hex
+            uid: str = secrets.token_urlsafe(6)
         return uid
 
 
-def main():
+def main() -> None:
     try:
         Station.load()
         Line.load()
