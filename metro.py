@@ -100,7 +100,7 @@ class Menu:
             choice: str = input("\nEnter Ticket ID: ")
             if choice not in Ticket.tickets:
                 raise Exception
-            Ticket.tickets[choice].detail()
+            print(Ticket.tickets[choice].detail)
             print("\n" + Line.guide(Ticket.tickets[choice].path))
             input("Press ENTER to continue...")
         except Exception:
@@ -194,6 +194,9 @@ class Station:
         self.name: str = name
         self.neighbours: frozenset[Station] = frozenset()
         self.lines: set[str] = set()
+
+    def __repr__(self) -> str:
+        return self.name
     
     def __sub__(self, other: Station) -> tuple[Station, ...]:
         visited: set[int] = {self.uid}
@@ -220,16 +223,16 @@ class Station:
                     cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"])
                     temp.append((int(row["uid"]), row["neighbours"]))
                 for temp_uid, temp_neighbours in temp:
-                    cls.stations[temp_uid].neighbours = frozenset(cls.from_str(temp_neighbours))
+                    cls.stations[temp_uid].neighbours = frozenset(cls.split(temp_neighbours))
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
             raise RuntimeError(f'Error loading {Config.STATIONS_FILE}: {err}')
 
     @classmethod
     def display(cls) -> None:
-        for name, stations in Line.lines.items():
-            print(f'\n\033[4m{name}\n\033[0m')
+        for line, stations in Line.lines.items():
+            print(f'\n{Config.ANSI["underline"]}{line}\n{Config.ANSI["reset"]}')
             for station in stations:
-                print(f'  [{station.uid}] >>> {station.name}')
+                print(f' [{station.uid}] {station.name}')
 
     @classmethod
     def from_uid(cls, uid: int) -> Station:
@@ -244,7 +247,7 @@ class Station:
             return 0
     
     @classmethod
-    def from_str(cls, prompt: str) -> tuple[Station, ...]:
+    def split(cls, prompt: str) -> tuple[Station, ...]:
         arr: list[int] = [int(item) for item in prompt.split(Config.LIST_DELIMITER)]
         return tuple([cls.from_uid(item) for item in arr])
 
@@ -259,17 +262,17 @@ class Line:
             with open(Config.LINES_FILE, "r", newline=Config.NEWLINE) as file:
                 reader = csv.DictReader(file, delimiter=Config.DELIMITER)
                 for row in reader:
-                    stations = Station.from_str(row["stations"])
+                    stations = Station.split(row["stations"])
                     for station in stations:
                         Station.stations[station.uid].lines.add(row["name"])
-                    cls.lines[row["name"]] = Station.from_str(row["stations"])
+                    cls.lines[row["name"]] = Station.split(row["stations"])
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
             raise RuntimeError(f'Error loading {Config.LINES_FILE}: {err}')
     
     @classmethod
     def get_line(cls, x: Station, y: Station) -> str:
-        x_lines: set[str] = set(x.lines)
-        y_lines: set[str] = set(y.lines)
+        x_lines: set[str] = x.lines
+        y_lines: set[str] = y.lines
         intersection: set[str] = x_lines & y_lines
         return intersection.pop()
         
@@ -302,17 +305,21 @@ class Ticket:
         self.start_uid: int = start_uid
         self.stop_uid: int = stop_uid
         self.path: tuple[Station, ...] = path
-        self.price: int = (len(self.path) - 1) * Config.PRICE_FACTOR
 
     def __repr__(self) -> str:
         return self.uid
     
-    def detail(self) -> None:
+    @property
+    def detail(self) -> str:
         details: str = ""
         details += f'Ticket ID: {self.uid}\n'
         details += f'Starting: {Station.from_uid(self.start_uid).name}\n'
         details += f'Destination: {Station.from_uid(self.stop_uid).name}\n'
-        print(details)
+        return details
+    
+    @property
+    def price(self) -> int:
+        return (len(self.path) - 1) * Config.PRICE_FACTOR
     
     @classmethod
     def load(cls) -> None:
@@ -320,7 +327,7 @@ class Ticket:
             with open(Config.TICKETS_FILE, "r") as file:
                 reader = csv.DictReader(file, delimiter=Config.DELIMITER)
                 for row in reader:
-                    cls.tickets[row["uid"]] = Ticket(row["uid"], int(row["start_uid"]), int(row["stop_uid"]), Station.from_str(row["path"]))
+                    cls.tickets[row["uid"]] = Ticket(row["uid"], int(row["start_uid"]), int(row["stop_uid"]), Station.split(row["path"]))
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
             raise RuntimeError(f'Error loading {Config.TICKETS_FILE}: {err}')
 
