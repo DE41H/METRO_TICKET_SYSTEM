@@ -1,10 +1,9 @@
 from __future__ import annotations
 from typing import Callable
 
-import os
 import sys
 import csv
-import secrets
+import random
 from collections import deque
 
 
@@ -13,15 +12,6 @@ class Node:
     def __init__(self, value: Station) -> None:
         self.value: Station = value
         self.parent: Node
-
-    def __repr__(self) -> str:
-        return str(self.value)
-    
-    def __hash__(self) -> int:
-        return hash(self.value.uid)
-    
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, Node) and self.value.uid == other.value.uid
     
     @property
     def gen(self) -> list[Node]:
@@ -47,12 +37,31 @@ class Config:
     LINES_FILE: str = "data/lines.csv"
     TICKETS_FILE: str = "data/tickets.csv"
     DELIMITER: str = ","
-    LIST_DELIMITER: str = "$"
+    LIST_DELIMITER: str = "|"
     NEWLINE: str = ""
     PRICE_FACTOR: int = 3
+    PASS_CHARS: tuple[str, ...] = tuple([chr(i) for i in range(ord("A"), ord("Z") + 1)] + [str(i) for i in range(10)])
+    ANSI: dict[str, str] = {
+        "reset": "\033[0m",
+        "bold": "\033[1m",
+        "underline": "\033[4m",
+        "red": "\033[31m",
+        "green": "\033[32m",
+        "yellow": "\033[33m",
+        "orange": "\033[34m",
+        "magenta": "\033[35m",
+        "cyan": "\033[36m",
+        "grey": "\033[90m",
+        "orange": "\033[93m",
+        "pink": "\033[95m",
+        "clear": "\033[H",
+        "home": "\033[J"
+    }
 
 
 class Menu:
+
+    clear: str = Config.ANSI["clear"] + Config.ANSI["home"]
 
     def __init__(self) -> None:
         self.functions: dict[int, Callable[[], None]]  = {}
@@ -69,8 +78,7 @@ class Menu:
 
     def menu(self) -> None:
         while True:
-            self.clear()
-            print("\n=============[ MAIN MENU ]=============\n")
+            print(f'{self.clear}{Config.ANSI["bold"]}=============[ MAIN MENU ]============={Config.ANSI["reset"]}\n')
             for number, option in self.options.items():
                 print(f'[{number}] >>> {option}')
             try:
@@ -85,8 +93,7 @@ class Menu:
                 func()
     
     def view_tickets(self) -> None:
-        self.clear()
-        print("\n=============[ TICKET VIEWING ]=============\n")
+        print(f'{self.clear}{Config.ANSI["bold"]}=============[ TICKET VIEWING ]============={Config.ANSI["reset"]}')
         Ticket.display()
         try:
             choice: str = input("\nEnter Ticket ID: ")
@@ -99,8 +106,7 @@ class Menu:
             pass
         
     def buy_tickets(self) -> None:
-        self.clear()
-        print("\n=============[ TICKET PURCHASE ]=============\n")
+        print(f'{self.clear}{Config.ANSI["bold"]}=============[ TICKET PURCHASE ]============={Config.ANSI["reset"]}')
         Station.display()
         print()
         start_uid: int = self.input_station_id("starting")
@@ -118,7 +124,7 @@ class Menu:
         self.confirm_purchase(start_uid, stop_uid)
     
     def confirm_purchase(self, start_uid: int, stop_uid: int) -> None:
-        print("\n=============[ CONFIRMATION ]=============\n")
+        print(f'{self.clear}{Config.ANSI["bold"]}=============[ CONFIRMATION ]============={Config.ANSI["reset"]}')
         path: tuple[Station, ...] = Station.__sub__(Station.from_uid(start_uid), Station.from_uid(stop_uid))
         price: int = (len(path) - 1) * Config.PRICE_FACTOR
         route: str = ""
@@ -144,8 +150,7 @@ class Menu:
                 continue
 
     def remove_tickets(self) -> None:
-        self.clear()
-        print("\n=============[ TICKET REMOVAL ]=============\n")
+        print(f'{self.clear}{Config.ANSI["bold"]}=============[ TICKET REMOVAL ]============={Config.ANSI["reset"]}')
         Ticket.display()
         choice: str = input("\nEnter Ticket ID: ")
         if Ticket.remove(choice):
@@ -177,30 +182,17 @@ class Menu:
                         print("\nNot a valid Station!\nTry Again...\n")
                         continue
                     return uid
-    
-    @staticmethod
-    def clear():
-        try:
-            os.system('cls' if os.name == 'nt' else 'clear')
-        except Exception:
-            print("\033[H\033[J", end="")
 
 
 class Station:
     
     stations: dict[int, Station] = {}
 
-    def __init__(self, uid: int, name: str, neighbours: tuple[Station, ...], lines: tuple[str, ...]) -> None:
+    def __init__(self, uid: int, name: str, neighbours: tuple[Station, ...] = tuple(), lines: set[str] = set()) -> None:
         self.uid: int = uid
         self.name: str = name
         self.neighbours: tuple[Station, ...] = neighbours
-        self.lines: tuple[str, ...] = lines
-
-    def __repr__(self) -> str:
-        return self.name
-    
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, Station) and self.uid == other.uid
+        self.lines: set[str] = lines
     
     def __sub__(self, other: Station) -> tuple[Station, ...]:
         visited: set[int] = {self.uid}
@@ -220,11 +212,12 @@ class Station:
     @classmethod
     def load(cls) -> None:
         try:
+
             temp: list[tuple[int, str]] = []
             with open(Config.STATIONS_FILE, "r", newline=Config.NEWLINE) as file:
                 reader = csv.DictReader(file, delimiter=Config.DELIMITER)
                 for row in reader:
-                    cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"], tuple(), tuple())
+                    cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"])
                     temp.append((int(row["uid"]), row["neighbours"]))
                 for temp_uid, temp_neighbours in temp:
                     cls.stations[temp_uid].neighbours = cls.from_str(temp_neighbours)
@@ -234,7 +227,7 @@ class Station:
     @classmethod
     def display(cls) -> None:
         for name, stations in Line.lines.items():
-            print(f'\n-------------- <{name}> --------------\n')
+            print(f'\n\033[4m{name}\n\033[0m')
             for station in stations:
                 print(f'  [{station.uid}] >>> {station.name}')
 
@@ -252,7 +245,7 @@ class Station:
     
     @classmethod
     def from_str(cls, prompt: str) -> tuple[Station, ...]:
-        arr: list[int] = [int(item) for item in prompt.split("$")]
+        arr: list[int] = [int(item) for item in prompt.split(Config.LIST_DELIMITER)]
         return tuple([cls.from_uid(item) for item in arr])
 
 
@@ -268,24 +261,15 @@ class Line:
                 for row in reader:
                     stations = Station.from_str(row["stations"])
                     for station in stations:
-                        Station.stations[station.uid].lines = Station.stations[station.uid].lines + tuple(row["name"])
+                        Station.stations[station.uid].lines.add(row["name"])
                     cls.lines[row["name"]] = Station.from_str(row["stations"])
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
             raise RuntimeError(f'Error loading {Config.LINES_FILE}: {err}')
-        
-    @classmethod
-    def get_lines(cls, item: Station) -> list[str]:
-        lines: list[str] = []
-        for name, line in cls.lines.items():
-            for station in line:
-                if station == item:
-                    lines.append(name)
-        return lines
-
+    
     @classmethod
     def get_line(cls, x: Station, y: Station) -> str:
-        x_lines: set[str] = set(cls.get_lines(x))
-        y_lines: set[str] = set(cls.get_lines(y))
+        x_lines: set[str] = set(x.lines)
+        y_lines: set[str] = set(y.lines)
         intersection: set[str] = x_lines & y_lines
         return intersection.pop()
         
@@ -374,9 +358,9 @@ class Ticket:
 
     @classmethod
     def create_uid(cls) -> str:
-        uid: str = secrets.token_urlsafe(6)
-        while uid in Ticket.tickets:
-            uid: str = secrets.token_urlsafe(6)
+        uid: str = "".join(random.choices(Config.PASS_CHARS, k=3)) + "-" + "".join(random.choices(Config.PASS_CHARS, k=3))
+        while uid in cls.tickets:
+            uid = cls.create_uid()
         return uid
 
 
