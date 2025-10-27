@@ -3,6 +3,7 @@ from typing import Callable
 
 import sys
 import csv
+import string
 import random
 from collections import deque
 
@@ -40,7 +41,7 @@ class Config:
     LIST_DELIMITER: str = "|"
     NEWLINE: str = ""
     PRICE_FACTOR: int = 3
-    PASS_CHARS: tuple[str, ...] = tuple([chr(i) for i in range(ord("A"), ord("Z") + 1)] + [str(i) for i in range(10)])
+    PASS_CHARS: tuple[str, ...] = tuple(string.ascii_uppercase + string.digits)
     ANSI: dict[str, str] = {
         "reset": "\033[0m",
         "bold": "\033[1m",
@@ -188,11 +189,11 @@ class Station:
     
     stations: dict[int, Station] = {}
 
-    def __init__(self, uid: int, name: str, neighbours: tuple[Station, ...] = tuple(), lines: set[str] = set()) -> None:
+    def __init__(self, uid: int, name: str) -> None:
         self.uid: int = uid
         self.name: str = name
-        self.neighbours: tuple[Station, ...] = neighbours
-        self.lines: set[str] = lines
+        self.neighbours: frozenset[Station] = frozenset()
+        self.lines: set[str] = set()
     
     def __sub__(self, other: Station) -> tuple[Station, ...]:
         visited: set[int] = {self.uid}
@@ -219,7 +220,7 @@ class Station:
                     cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"])
                     temp.append((int(row["uid"]), row["neighbours"]))
                 for temp_uid, temp_neighbours in temp:
-                    cls.stations[temp_uid].neighbours = cls.from_str(temp_neighbours)
+                    cls.stations[temp_uid].neighbours = frozenset(cls.from_str(temp_neighbours))
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
             raise RuntimeError(f'Error loading {Config.STATIONS_FILE}: {err}')
 
@@ -348,7 +349,7 @@ class Ticket:
                 writer = csv.writer(file, delimiter=Config.DELIMITER)
                 writer.writerow(["uid", "start_uid", "stop_uid", "path"])
                 for uid, ticket in cls.tickets.items():
-                    writer.writerow([uid, ticket.start_uid, ticket.stop_uid, str("$".join(str(item.uid) for item in ticket.path))])
+                    writer.writerow([uid, ticket.start_uid, ticket.stop_uid, str(Config.LIST_DELIMITER.join(str(item.uid) for item in ticket.path))])
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
             raise RuntimeError(f'Error writing to {Config.TICKETS_FILE}: {err}')
 
@@ -368,7 +369,6 @@ def main() -> None:
     except RuntimeError as err:
         print(f'Error: {err}')
         return
-
     menu: Menu = Menu()
     menu.menu()
 
