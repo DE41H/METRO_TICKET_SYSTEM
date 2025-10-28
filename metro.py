@@ -8,30 +8,6 @@ import random
 from collections import deque
 
 
-class Node:
-
-    def __init__(self, value: Station) -> None:
-        self.value: Station = value
-        self.parent: Node
-    
-    @property
-    def gen(self) -> list[Node]:
-        alpha: list[Node] = []
-        root: Node = self
-        while True:
-            alpha.append(root)
-            try:
-                root = root.parent
-            except AttributeError:
-                break
-        return alpha
-    
-    def add_child(self, value: Station) -> Node:
-        child = Node(value)
-        child.parent = self
-        return child
-
-
 class Config:
 
     STATIONS_FILE: str = "data/stations.csv"
@@ -49,7 +25,7 @@ class Config:
         "red": "\033[31m",
         "green": "\033[32m",
         "yellow": "\033[33m",
-        "orange": "\033[34m",
+        "blue": "\033[34m",
         "magenta": "\033[35m",
         "cyan": "\033[36m",
         "grey": "\033[90m",
@@ -188,6 +164,7 @@ class Menu:
 class Station:
     
     stations: dict[int, Station] = {}
+    display_text: str = ""
 
     def __init__(self, uid: int, name: str) -> None:
         self.uid: int = uid
@@ -198,19 +175,31 @@ class Station:
     def __repr__(self) -> str:
         return self.name
     
+    def __hash__(self) -> int:
+        return hash(self.uid)
+    
+    def __eq__(self, value: object) -> bool:
+        return isinstance(value, self.__class__) and self.uid == value.uid
+    
     def __sub__(self, other: Station) -> tuple[Station, ...]:
         visited: set[int] = {self.uid}
-        queue: deque[Node] = deque([Node(self)])
+        queue: deque[int] = deque([self.uid])
+        parents: dict[int, int] = {}
         while queue:
-            node: Node = queue.popleft()
-            if node.value.uid == other.uid:
-                path: list[Node] = node.gen
-                path.reverse()
-                return tuple(item.value for item in path)
-            for neighbour in node.value.neighbours:
+            station: Station = self.from_uid(queue.popleft())
+            if station.uid == other.uid:
+                path: list[int] = []
+                temp: int = station.uid
+                while temp in parents:
+                    path.append(temp)
+                    temp = parents[temp]
+                path.append(self.uid)
+                return tuple([self.from_uid(item) for item in path])
+            for neighbour in station.neighbours:
                 if neighbour.uid not in visited:
                     visited.add(neighbour.uid)
-                    queue.append(node.add_child(neighbour))
+                    parents[neighbour.uid] = station.uid
+                    queue.append(neighbour.uid)
         return tuple()
 
     @classmethod
@@ -229,12 +218,15 @@ class Station:
 
     @classmethod
     def display(cls) -> str:
-        out: str = ""
-        for line, stations in Line.lines.items():
-            out += f'\n{Config.ANSI["underline"]}{line}\n{Config.ANSI["reset"]}\n'
-            for station in stations:
-                out += f' [{station.uid}] {station.name}\n'
-        return out
+        if cls.display_text == "":
+            out: str = ""
+            for line, stations in Line.lines.items():
+                out += f'\n{Config.ANSI["underline"]}{line}\n{Config.ANSI["reset"]}\n'
+                for station in stations:
+                    out += f' [{station.uid}] {station.name}\n'
+            return out
+        else:
+            return cls.display_text
 
     @classmethod
     def from_uid(cls, uid: int) -> Station:
@@ -370,13 +362,16 @@ class Ticket:
         while uid in cls.tickets:
             uid = cls.create_uid()
         return uid
-
+    
+def cache() -> None:
+    Station.load()
+    Line.load()
+    Station.display_text = Station.display()
+    Ticket.load()
 
 def main() -> None:
     try:
-        Station.load()
-        Line.load()
-        Ticket.load()
+        cache()
     except RuntimeError as err:
         print(f'Error: {err}')
         return
