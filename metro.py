@@ -203,8 +203,14 @@ class Station:
                     temp.add((int(row["uid"]), row["neighbours"]))
                 for temp_uid, temp_neighbours in temp:
                     cls.stations[temp_uid].neighbours = frozenset(cls.split(temp_neighbours))
-        except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
-            raise RuntimeError(f'Error loading {Config.STATIONS_FILE}: {err}')
+        except FileNotFoundError:
+            raise RuntimeError(f'Error: {Config.STATIONS_FILE} not found')
+        except PermissionError:
+            raise RuntimeError(f'Error: Lacking permission to write to {Config.STATIONS_FILE}')
+        except (ValueError, csv.Error, KeyError):
+            raise RuntimeError(f'Error: Data format error in {Config.STATIONS_FILE}')
+        except (IOError, Exception):
+            raise RuntimeError(f'Error: Problem loading {Config.STATIONS_FILE}')
 
     @classmethod
     def display(cls) -> str:
@@ -249,8 +255,14 @@ class Line:
                     cls.lines[row["name"]] = stations
                     for station in stations:
                         Station.stations[station.uid].lines.add(row["name"])
-        except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
-            raise RuntimeError(f'Error loading {Config.LINES_FILE}: {err}')
+        except FileNotFoundError:
+            raise RuntimeError(f'Error: {Config.LINES_FILE} not found')
+        except PermissionError:
+            raise RuntimeError(f'Error: Lacking permission to write to {Config.LINES_FILE}')
+        except (ValueError, csv.Error, KeyError):
+            raise RuntimeError(f'Error: Data format error in {Config.LINES_FILE}')
+        except (IOError, Exception):
+            raise RuntimeError(f'Error: Problem loading {Config.LINES_FILE}')
     
     @classmethod
     def get_line(cls, x: Station, y: Station) -> str:
@@ -311,8 +323,12 @@ class Ticket:
                 reader = csv.DictReader(file, delimiter=Config.DELIMITER)
                 for row in reader:
                     cls.tickets[row["uid"]] = Ticket(row["uid"], int(row["start_uid"]), int(row["stop_uid"]), Station.split(row["path"]))
-        except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
-            raise RuntimeError(f'Error loading {Config.TICKETS_FILE}: {err}')
+        except FileNotFoundError:
+            raise RuntimeError(f'Error: {Config.TICKETS_FILE} not found')
+        except (ValueError, csv.Error, KeyError):
+            raise RuntimeError(f'Error: Data format error in {Config.TICKETS_FILE}')
+        except (IOError, Exception):
+            raise RuntimeError(f'Error: Problem loading {Config.TICKETS_FILE}')
 
     @classmethod
     def buy(cls, ticket: Ticket) -> None:
@@ -342,8 +358,14 @@ class Ticket:
                 for uid, ticket in cls.tickets.items():
                     path: str = Config.LIST_DELIMITER.join([str(item.uid) for item in ticket.path])
                     writer.writerow([uid, ticket.start_uid, ticket.stop_uid, path])
-        except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
-            raise RuntimeError(f'Error writing to {Config.TICKETS_FILE}: {err}')
+        except FileNotFoundError:
+            raise RuntimeError(f'Error: {Config.TICKETS_FILE} not found')
+        except PermissionError:
+            raise RuntimeError(f'Error: Lacking permission to write to {Config.TICKETS_FILE}')
+        except (ValueError, csv.Error, KeyError):
+            raise RuntimeError(f'Error: Data format error in {Config.TICKETS_FILE}')
+        except (IOError, Exception):
+            raise RuntimeError(f'Error: Problem loading {Config.TICKETS_FILE}')
 
     @classmethod
     def create_uid(cls) -> str:
@@ -359,11 +381,17 @@ def cache() -> None:
     Ticket.load()
 
 def main() -> None:
-    try:
-        cache()
-    except RuntimeError as err:
-        print(f'Error: {err}')
-        return
+    while True:
+        try:
+            cache()
+            break
+        except RuntimeError as err:
+            print(err)
+            choice: str = input("Press ENTER to abort...\nEnter text to retry: ")
+            if choice == "":
+                return
+            else:
+                continue
     menu: Menu = Menu()
     menu.menu()
 
