@@ -36,6 +36,17 @@ class Config:
         "clear": "\033[H",
         "home": "\033[J"
     }
+    LINE_COLORS: ClassVar[dict[str, str]] = {
+        "Red Line": ANSI["red"],
+        "Yellow Line": ANSI["yellow"],
+        "Blue Line": ANSI["blue"],
+        "Green Line": ANSI["green"],
+        "Violet Line": ANSI["magenta"],
+        "Pink Line": ANSI["pink"],
+        "Magenta Line": ANSI["magenta"],
+        "Grey Line": ANSI["grey"],
+        "Airport Express": ANSI["orange"]
+    }
 
 
 class Menu:
@@ -109,7 +120,7 @@ class Menu:
         ticket: Ticket = Ticket(Ticket.create_uid(), start_uid, stop_uid, ())
         ticket.path = Station.from_uid(stop_uid) - Station.from_uid(start_uid)
         while True:
-            print(f'Starting: {Station.from_uid(ticket.start_uid)}\nDestination: {Station.from_uid(ticket.stop_uid)}\nRoute: {Line.guide(ticket.path)}\nPrice: ${ticket.price}')
+            print(f'Starting: {Station.from_uid(ticket.start_uid)}\nDestination: {Station.from_uid(ticket.stop_uid)}\nPrice: ${ticket.price}')
             choice = input("\nPurchase this ticket? (y/n)\n").strip().lower()
             match choice:
                 case "y":
@@ -275,23 +286,22 @@ class Line:
         y_lines: set[str] = y.lines
         intersection: set[str] = x_lines & y_lines
         return intersection.pop()
-        
+    
     @classmethod
     def guide(cls, path: tuple[Station, ...]) -> str:
         instructions: str = ""
         for i in range(len(path)):
             if i == 0:
-                instructions += path[i].name
+                next_line: str = cls.get_line(path[i], path[i + 1])
+                instructions += Config.LINE_COLORS[next_line] + path[i].name + Config.ANSI["reset"]
             else:
+                curr_line: str = cls.get_line(path[i], path[i - 1])
+                instructions += " => " + Config.LINE_COLORS[curr_line] + path[i].name  + Config.ANSI["reset"]
                 if i < len(path) - 1:
-                    curr_line: str = cls.get_line(path[i], path[i - 1])
                     next_line: str = cls.get_line(path[i], path[i + 1])
-                    instructions += " => " + path[i].name
                     if not (curr_line == next_line):
-                        instructions += f'\nChange lines from {curr_line} to {next_line}...\n'
-                        instructions += path[i].name
-                else:
-                    instructions += " => " + path[i].name
+                        instructions += f'\nChange lines from {Config.LINE_COLORS[curr_line]}{curr_line}{Config.ANSI["reset"]} to {Config.LINE_COLORS[next_line]}{next_line}{Config.ANSI["reset"]}...\n'
+                        instructions += Config.LINE_COLORS[next_line] + path[i].name  + Config.ANSI["reset"]
         instructions += "\n"
         return instructions
 
