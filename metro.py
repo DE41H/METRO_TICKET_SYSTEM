@@ -84,12 +84,15 @@ class Menu:
     def view_tickets(self) -> None:
         while True:
             print(self.clear)
-            print(f'{Config.ANSI["bold"]}=============[ TICKET VIEWING ]============={Config.ANSI["reset"]}')
+            print(f'{Config.ANSI["bold"]}=============[ TICKET VIEWING ]============={Config.ANSI["reset"]}\n')
             print(Ticket.display())
-            choice: str = input("\nEnter Ticket ID: ")
-            if choice in Ticket.tickets:
+            choice: str = input("Enter Ticket ID (ENTER -> abort): ")
+            if choice == "":
+                return
+            elif choice in Ticket.tickets:
+                print(self.clear)
                 print(Ticket.tickets[choice].detail)
-                print("\n" + Line.guide(Ticket.tickets[choice].path))
+                print(Line.guide(Ticket.tickets[choice].path))
                 input("Press ENTER to continue...")
                 return
             else:
@@ -98,7 +101,7 @@ class Menu:
         
     def buy_tickets(self) -> None:
         print(self.clear)
-        print(f'{Config.ANSI["bold"]}=============[ TICKET PURCHASE ]============={Config.ANSI["reset"]}')
+        print(f'{Config.ANSI["bold"]}=============[ TICKET PURCHASE ]============={Config.ANSI["reset"]}\n')
         print(Station.display(), end="\n\n")
         start_uid: int = self.input_station_id("starting")
         if not start_uid:
@@ -115,34 +118,37 @@ class Menu:
         self.confirm_purchase(start_uid, stop_uid)
     
     def confirm_purchase(self, start_uid: int, stop_uid: int) -> None:
-        print(self.clear)
-        print(f'{Config.ANSI["bold"]}=============[ CONFIRMATION ]============={Config.ANSI["reset"]}')
-        ticket: Ticket = Ticket(Ticket.create_uid(), start_uid, stop_uid, ())
-        ticket.path = Station.from_uid(stop_uid) - Station.from_uid(start_uid)
         while True:
+            print(self.clear)
+            print(f'{Config.ANSI["bold"]}=============[ CONFIRMATION ]============={Config.ANSI["reset"]}\n')
+            ticket: Ticket = Ticket(Ticket.create_uid(), start_uid, stop_uid, ())
+            ticket.path = Station.from_uid(stop_uid) - Station.from_uid(start_uid)
             print(f'Starting: {Station.from_uid(ticket.start_uid)}\nDestination: {Station.from_uid(ticket.stop_uid)}\nPrice: ${ticket.price}')
             choice = input("\nPurchase this ticket? (y/n)\n").strip().lower()
             match choice:
                 case "y":
-                    Ticket.buy(ticket)
+                    print(Ticket.buy(ticket))
                     return
                 case "n":
                     return
                 case _:
                     print("\nNot a valid option!\nTry again...")
+                    time.sleep(Config.DELAY)
 
     def remove_tickets(self) -> None:
         while True:
             print(self.clear)
-            print(f'{Config.ANSI["bold"]}=============[ TICKET REMOVAL ]============={Config.ANSI["reset"]}')
+            print(f'{Config.ANSI["bold"]}=============[ TICKET REMOVAL ]============={Config.ANSI["reset"]}\n')
             print(Ticket.display())
-            choice: str = input("\nEnter Ticket ID: ")
+            choice: str = input("Enter Ticket ID (ENTER -> abort): ")
             if choice == "":
                 return
             elif Ticket.remove(choice):
                 print(f'\nTicket with ID: {choice} has been deleted!')
+                time.sleep(Config.DELAY)
             else:
                 print("\nInvalid Ticket ID!")
+                time.sleep(Config.DELAY)
 
     @staticmethod
     def exit() -> None:
@@ -152,7 +158,7 @@ class Menu:
     @staticmethod
     def input_station_id(prompt: str) -> int:
         while True:
-            choice: str = input(f'Enter {prompt} Station ID: ')
+            choice: str = input(f'Enter {prompt} Station ID (ENTER -> abort): ')
             if choice == "":
                 return 0
             elif choice.isdigit() and int(choice) in Station.stations:
@@ -233,7 +239,7 @@ class Station:
         if cls.display_text == "":
             out: str = ""
             for line, stations in Line.lines.items():
-                out += f'\n {Config.ANSI["underline"]}{line}\n{Config.ANSI["reset"]}\n'
+                out += f'\n {Config.ANSI["underline"]}{line}\n{Config.ANSI["reset"]}'
                 for station in stations:
                     out += f' [{station.uid}] {station.name}\n'
             cls.display_text = out
