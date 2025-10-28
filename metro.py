@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable
+from typing import Callable, ClassVar
 
 import sys
 import csv
@@ -11,16 +11,16 @@ from collections import deque
 
 class Config:
 
-    DELAY: int = 1
-    STATIONS_FILE: str = "data/stations.csv"
-    LINES_FILE: str = "data/lines.csv"
-    TICKETS_FILE: str = "data/tickets.csv"
-    DELIMITER: str = ","
-    LIST_DELIMITER: str = "|"
-    NEWLINE: str = ""
-    PRICE_FACTOR: int = 3
-    PASS_CHARS: tuple[str, ...] = tuple(string.ascii_uppercase + string.digits)
-    ANSI: dict[str, str] = {
+    DELAY: ClassVar[float] = 1.2
+    STATIONS_FILE: ClassVar[str] = "data/stations.csv"
+    LINES_FILE: ClassVar[str] = "data/lines.csv"
+    TICKETS_FILE: ClassVar[str] = "data/tickets.csv"
+    DELIMITER: ClassVar[str] = ","
+    LIST_DELIMITER: ClassVar[str] = "|"
+    NEWLINE: ClassVar[str] = ""
+    PRICE_FACTOR: ClassVar[int] = 3
+    PASS_CHARS: ClassVar[str] = string.ascii_uppercase + string.digits
+    ANSI: ClassVar[dict[str, str]] = {
         "reset": "\033[0m",
         "bold": "\033[1m",
         "underline": "\033[4m",
@@ -40,7 +40,7 @@ class Config:
 
 class Menu:
 
-    clear: str = Config.ANSI["clear"] + Config.ANSI["home"]
+    clear: ClassVar[str] = Config.ANSI["clear"] + Config.ANSI["home"]
 
     def __init__(self) -> None:
         self.functions: dict[int, Callable[[], None]]  = {}
@@ -57,7 +57,8 @@ class Menu:
 
     def menu(self) -> None:
         while True:
-            print(f'{self.clear}{Config.ANSI["bold"]}=============[ MAIN MENU ]============={Config.ANSI["reset"]}\n')
+            print(self.clear)
+            print(f'{Config.ANSI["bold"]}=============[ MAIN MENU ]============={Config.ANSI["reset"]}\n')
             for number, option in self.options.items():
                 print(f'[{number}] {option}')
             choice: str = input("\nEnter Option ID: ")
@@ -71,7 +72,8 @@ class Menu:
     
     def view_tickets(self) -> None:
         while True:
-            print(f'{self.clear}{Config.ANSI["bold"]}=============[ TICKET VIEWING ]============={Config.ANSI["reset"]}')
+            print(self.clear)
+            print(f'{Config.ANSI["bold"]}=============[ TICKET VIEWING ]============={Config.ANSI["reset"]}')
             print(Ticket.display())
             choice: str = input("\nEnter Ticket ID: ")
             if choice in Ticket.tickets:
@@ -84,7 +86,8 @@ class Menu:
                 time.sleep(Config.DELAY)
         
     def buy_tickets(self) -> None:
-        print(f'{self.clear}{Config.ANSI["bold"]}=============[ TICKET PURCHASE ]============={Config.ANSI["reset"]}')
+        print(self.clear)
+        print(f'{Config.ANSI["bold"]}=============[ TICKET PURCHASE ]============={Config.ANSI["reset"]}')
         print(Station.display(), end="\n\n")
         start_uid: int = self.input_station_id("starting")
         if not start_uid:
@@ -101,7 +104,8 @@ class Menu:
         self.confirm_purchase(start_uid, stop_uid)
     
     def confirm_purchase(self, start_uid: int, stop_uid: int) -> None:
-        print(f'{self.clear}{Config.ANSI["bold"]}=============[ CONFIRMATION ]============={Config.ANSI["reset"]}')
+        print(self.clear)
+        print(f'{Config.ANSI["bold"]}=============[ CONFIRMATION ]============={Config.ANSI["reset"]}')
         ticket: Ticket = Ticket(Ticket.create_uid(), start_uid, stop_uid, ())
         ticket.path = Station.from_uid(stop_uid) - Station.from_uid(start_uid)
         while True:
@@ -118,7 +122,8 @@ class Menu:
 
     def remove_tickets(self) -> None:
         while True:
-            print(f'{self.clear}{Config.ANSI["bold"]}=============[ TICKET REMOVAL ]============={Config.ANSI["reset"]}')
+            print(self.clear)
+            print(f'{Config.ANSI["bold"]}=============[ TICKET REMOVAL ]============={Config.ANSI["reset"]}')
             print(Ticket.display())
             choice: str = input("\nEnter Ticket ID: ")
             if choice == "":
@@ -153,8 +158,8 @@ class Menu:
 
 class Station:
     
-    stations: dict[int, Station] = {}
-    display_text: str = ""
+    stations: ClassVar[dict[int, Station]] = {}
+    display_text: ClassVar[str] = ""
 
     def __init__(self, uid: int, name: str) -> None:
         self.uid: int = uid
@@ -217,7 +222,7 @@ class Station:
         if cls.display_text == "":
             out: str = ""
             for line, stations in Line.lines.items():
-                out += f'\n{Config.ANSI["underline"]}{line}\n{Config.ANSI["reset"]}\n'
+                out += f'\n {Config.ANSI["underline"]}{line}\n{Config.ANSI["reset"]}\n'
                 for station in stations:
                     out += f' [{station.uid}] {station.name}\n'
             cls.display_text = out
@@ -243,7 +248,7 @@ class Station:
 
 class Line:
 
-    lines: dict[str, tuple[Station, ...]] = {}
+    lines: ClassVar[dict[str, tuple[Station, ...]]] = {}
 
     @classmethod
     def load(cls) -> None:
@@ -319,7 +324,7 @@ class Ticket:
     @classmethod
     def load(cls) -> None:
         try:
-            with open(Config.TICKETS_FILE, "r") as file:
+            with open(Config.TICKETS_FILE, "r", newline=Config.NEWLINE) as file:
                 reader = csv.DictReader(file, delimiter=Config.DELIMITER)
                 for row in reader:
                     cls.tickets[row["uid"]] = Ticket(row["uid"], int(row["start_uid"]), int(row["stop_uid"]), Station.split(row["path"]))
@@ -369,11 +374,10 @@ class Ticket:
 
     @classmethod
     def create_uid(cls) -> str:
-        while True:
+        uid: str = "".join(random.choices(Config.PASS_CHARS, k=3)) + "-" + "".join(random.choices(Config.PASS_CHARS, k=3))
+        while uid in cls.tickets:
             uid: str = "".join(random.choices(Config.PASS_CHARS, k=3)) + "-" + "".join(random.choices(Config.PASS_CHARS, k=3))
-            while uid in cls.tickets:
-                uid: str = "".join(random.choices(Config.PASS_CHARS, k=3)) + "-" + "".join(random.choices(Config.PASS_CHARS, k=3))
-            return uid
+        return uid
     
 def cache() -> None:
     Station.load()
@@ -386,7 +390,7 @@ def main() -> None:
             cache()
             break
         except RuntimeError as err:
-            print(err)
+            print(Config.ANSI["red"] + str(err) + Config.ANSI["reset"])
             choice: str = input("Press ENTER to abort...\nEnter text to retry: ")
             if choice == "":
                 return
