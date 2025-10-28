@@ -350,7 +350,7 @@ class Ticket:
         while True:
             uid: str = "".join(random.choices(Config.PASS_CHARS, k=3)) + "-" + "".join(random.choices(Config.PASS_CHARS, k=3))
             while uid in cls.tickets:
-                continue
+                uid: str = "".join(random.choices(Config.PASS_CHARS, k=3)) + "-" + "".join(random.choices(Config.PASS_CHARS, k=3))
             return uid
     
 def cache() -> None:
