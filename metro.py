@@ -57,35 +57,31 @@ class Menu:
         while True:
             print(f'{self.clear}{Config.ANSI["bold"]}=============[ MAIN MENU ]============={Config.ANSI["reset"]}\n')
             for number, option in self.options.items():
-                print(f'[{number}] >>> {option}')
-            try:
-                choice: int = int(input("\nEnter Option ID: "))
-                if choice not in self.functions:
-                    raise ValueError
-            except ValueError:
-                print("Not a valid option!\nTry Again...")
-                continue
-            func = self.functions.get(choice)
-            if func:
-                func()
+                print(f'[{number}] {option}')
+            choice: str = input("\nEnter Option ID: ")
+            if choice.isdigit() and int(choice) in self.functions:
+                func = self.functions.get(int(choice))
+                if func:
+                    func()
+            else:
+                print("Not a valid Option ID!\nTry Again...")
     
     def view_tickets(self) -> None:
-        print(f'{self.clear}{Config.ANSI["bold"]}=============[ TICKET VIEWING ]============={Config.ANSI["reset"]}')
-        print(Ticket.display())
-        try:
+        while True:
+            print(f'{self.clear}{Config.ANSI["bold"]}=============[ TICKET VIEWING ]============={Config.ANSI["reset"]}')
+            print(Ticket.display())
             choice: str = input("\nEnter Ticket ID: ")
-            if choice not in Ticket.tickets:
-                raise Exception
-            print(Ticket.tickets[choice].detail)
-            print("\n" + Line.guide(Ticket.tickets[choice].path))
-            input("Press ENTER to continue...")
-        except Exception:
-            pass
+            if choice in Ticket.tickets:
+                print(Ticket.tickets[choice].detail)
+                print("\n" + Line.guide(Ticket.tickets[choice].path))
+                input("Press ENTER to continue...")
+                return
+            else:
+                print("Invalid Ticket ID\nTry Again...")
         
     def buy_tickets(self) -> None:
         print(f'{self.clear}{Config.ANSI["bold"]}=============[ TICKET PURCHASE ]============={Config.ANSI["reset"]}')
-        print(Station.display())
-        print()
+        print(Station.display(), end="\n\n")
         start_uid: int = self.input_station_id("starting")
         if not start_uid:
             return
@@ -102,38 +98,31 @@ class Menu:
     
     def confirm_purchase(self, start_uid: int, stop_uid: int) -> None:
         print(f'{self.clear}{Config.ANSI["bold"]}=============[ CONFIRMATION ]============={Config.ANSI["reset"]}')
-        path: tuple[Station, ...] = Station.__sub__(Station.from_uid(start_uid), Station.from_uid(stop_uid))
-        price: int = (len(path) - 1) * Config.PRICE_FACTOR
-        route: str = ""
-        for i in range(len(path)):
-            if i == 0:
-                route += path[i].name
-            else:
-                route += " => " + path[i].name
+        ticket: Ticket = Ticket(Ticket.create_uid(), start_uid, stop_uid, ())
+        ticket.path = Station.from_uid(stop_uid) - Station.from_uid(start_uid)
         while True:
-            try:
-                print(f'Starting: {Station.from_uid(start_uid)}\nDestination: {Station.from_uid(stop_uid)}\nRoute: {route}\nPrice: ${price}')
-                choice = input("\nPurchase this ticket? (y/n)\n").strip().lower()
-                match choice:
-                    case "y":
-                        Ticket.buy(start_uid, stop_uid, path)
-                        return
-                    case "n":
-                        return
-                    case _:
-                        raise ValueError
-            except ValueError:
-                print("\nError!\nTry again...")
-                continue
+            print(f'Starting: {Station.from_uid(ticket.start_uid)}\nDestination: {Station.from_uid(ticket.stop_uid)}\nRoute: {Line.guide(ticket.path)}\nPrice: ${ticket.price}')
+            choice = input("\nPurchase this ticket? (y/n)\n").strip().lower()
+            match choice:
+                case "y":
+                    Ticket.buy(ticket)
+                    return
+                case "n":
+                    return
+                case _:
+                    print("\nNot a valid option!\nTry again...")
 
     def remove_tickets(self) -> None:
-        print(f'{self.clear}{Config.ANSI["bold"]}=============[ TICKET REMOVAL ]============={Config.ANSI["reset"]}')
-        print(Ticket.display())
-        choice: str = input("\nEnter Ticket ID: ")
-        if Ticket.remove(choice):
-            print(f'\nTicket with ID: {choice} has been deleted!')
-        else:
-            print("\nInvalid Ticket ID!")
+        while True:
+            print(f'{self.clear}{Config.ANSI["bold"]}=============[ TICKET REMOVAL ]============={Config.ANSI["reset"]}')
+            print(Ticket.display())
+            choice: str = input("\nEnter Ticket ID: ")
+            if choice == "":
+                return
+            elif Ticket.remove(choice):
+                print(f'\nTicket with ID: {choice} has been deleted!')
+            else:
+                print("\nInvalid Ticket ID!")
 
     @staticmethod
     def exit() -> None:
@@ -224,9 +213,8 @@ class Station:
                 out += f'\n{Config.ANSI["underline"]}{line}\n{Config.ANSI["reset"]}\n'
                 for station in stations:
                     out += f' [{station.uid}] {station.name}\n'
-            return out
-        else:
-            return cls.display_text
+            cls.display_text = out
+        return cls.display_text
 
     @classmethod
     def from_uid(cls, uid: int) -> Station:
@@ -258,7 +246,8 @@ class Line:
                 for row in reader:
                     stations: tuple[Station, ...] = Station.split(row["stations"])
                     cls.lines[row["name"]] = stations
-                    [Station.stations[station.uid].lines.add(row["name"]) for station in stations]
+                    for station in stations:
+                        Station.stations[station.uid].lines.add(row["name"])
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
             raise RuntimeError(f'Error loading {Config.LINES_FILE}: {err}')
     
@@ -325,9 +314,8 @@ class Ticket:
             raise RuntimeError(f'Error loading {Config.TICKETS_FILE}: {err}')
 
     @classmethod
-    def buy(cls, start_uid: int, stop_uid: int, path: tuple[Station, ...]) -> None:
-        uid: str = cls.create_uid()
-        cls.tickets[uid] = Ticket(uid, start_uid, stop_uid, path)
+    def buy(cls, ticket: Ticket) -> None:
+        cls.tickets[ticket.uid] = ticket
             
     @classmethod
     def display(cls) -> str:
@@ -351,7 +339,7 @@ class Ticket:
                 writer = csv.writer(file, delimiter=Config.DELIMITER)
                 writer.writerow(["uid", "start_uid", "stop_uid", "path"])
                 for uid, ticket in cls.tickets.items():
-                    path: str = Config.LIST_DELIMITER.join(map(str, ticket.path))
+                    path: str = Config.LIST_DELIMITER.join([str(item.uid) for item in ticket.path])
                     writer.writerow([uid, ticket.start_uid, ticket.stop_uid, path])
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
             raise RuntimeError(f'Error writing to {Config.TICKETS_FILE}: {err}')
@@ -366,7 +354,6 @@ class Ticket:
 def cache() -> None:
     Station.load()
     Line.load()
-    Station.display_text = Station.display()
     Ticket.load()
 
 def main() -> None:
