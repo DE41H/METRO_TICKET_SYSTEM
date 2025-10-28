@@ -256,10 +256,9 @@ class Line:
             with open(Config.LINES_FILE, "r", newline=Config.NEWLINE) as file:
                 reader = csv.DictReader(file, delimiter=Config.DELIMITER)
                 for row in reader:
-                    cls.lines[row["name"]] = Station.split(row["stations"])
-                    stations = Station.split(row["stations"])
-                    for station in stations:
-                        Station.stations[station.uid].lines.add(row["name"])
+                    stations: tuple[Station, ...] = Station.split(row["stations"])
+                    cls.lines[row["name"]] = stations
+                    [Station.stations[station.uid].lines.add(row["name"]) for station in stations]
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
             raise RuntimeError(f'Error loading {Config.LINES_FILE}: {err}')
     
@@ -334,7 +333,7 @@ class Ticket:
     def display(cls) -> str:
         out: str = ""
         for uid, ticket in cls.tickets.items():
-            out += f'[{uid}] >>> {Station.from_uid(ticket.start_uid)} => {Station.from_uid(ticket.stop_uid)}\n'
+            out += f'[{uid}] {Station.from_uid(ticket.start_uid)} => {Station.from_uid(ticket.stop_uid)}\n'
         return out
     
     @classmethod
@@ -352,7 +351,8 @@ class Ticket:
                 writer = csv.writer(file, delimiter=Config.DELIMITER)
                 writer.writerow(["uid", "start_uid", "stop_uid", "path"])
                 for uid, ticket in cls.tickets.items():
-                    writer.writerow([uid, ticket.start_uid, ticket.stop_uid, str(Config.LIST_DELIMITER.join(str(item.uid) for item in ticket.path))])
+                    path: str = Config.LIST_DELIMITER.join(map(str, ticket.path))
+                    writer.writerow([uid, ticket.start_uid, ticket.stop_uid, path])
         except (FileNotFoundError, IOError, csv.Error, KeyError) as err:
             raise RuntimeError(f'Error writing to {Config.TICKETS_FILE}: {err}')
 
