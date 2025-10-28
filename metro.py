@@ -3,6 +3,7 @@ from typing import Callable
 
 import sys
 import csv
+import time
 import string
 import random
 from collections import deque
@@ -10,6 +11,7 @@ from collections import deque
 
 class Config:
 
+    DELAY: int = 1
     STATIONS_FILE: str = "data/stations.csv"
     LINES_FILE: str = "data/lines.csv"
     TICKETS_FILE: str = "data/tickets.csv"
@@ -65,6 +67,7 @@ class Menu:
                     func()
             else:
                 print("Not a valid Option ID!\nTry Again...")
+                time.sleep(Config.DELAY)
     
     def view_tickets(self) -> None:
         while True:
@@ -78,6 +81,7 @@ class Menu:
                 return
             else:
                 print("Invalid Ticket ID\nTry Again...")
+                time.sleep(Config.DELAY)
         
     def buy_tickets(self) -> None:
         print(f'{self.clear}{Config.ANSI["bold"]}=============[ TICKET PURCHASE ]============={Config.ANSI["reset"]}')
@@ -135,19 +139,16 @@ class Menu:
             choice: str = input(f'Enter {prompt} Station ID: ')
             if choice == "":
                 return 0
+            elif choice.isdigit() and int(choice) in Station.stations:
+                return int(choice)
             else:
-                try:
-                    uid: int = int(choice)
-                    if uid not in Station.stations:
-                        print("\nNot a valid Station!\nTry Again...\n")
-                        continue
+                uid: int = Station.exists(choice)
+                if uid:
                     return uid
-                except ValueError:
-                    uid: int = Station.exists(choice)
-                    if not uid:
-                        print("\nNot a valid Station!\nTry Again...\n")
-                        continue
-                    return uid
+                else:
+                    print("\nNot a valid Station!\nTry Again...\n")
+                    continue
+                    
 
 
 class Station:
@@ -346,10 +347,11 @@ class Ticket:
 
     @classmethod
     def create_uid(cls) -> str:
-        uid: str = "".join(random.choices(Config.PASS_CHARS, k=3)) + "-" + "".join(random.choices(Config.PASS_CHARS, k=3))
-        while uid in cls.tickets:
-            uid = cls.create_uid()
-        return uid
+        while True:
+            uid: str = "".join(random.choices(Config.PASS_CHARS, k=3)) + "-" + "".join(random.choices(Config.PASS_CHARS, k=3))
+            while uid in cls.tickets:
+                continue
+            return uid
     
 def cache() -> None:
     Station.load()
