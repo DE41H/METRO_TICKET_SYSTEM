@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Callable, ClassVar
 
+import os
 import sys
 import csv
 import time
@@ -51,8 +52,6 @@ class Config:
 
 class Menu:
 
-    clear: ClassVar[str] = Config.ANSI["clear"] + Config.ANSI["home"]
-
     def __init__(self) -> None:
         self.functions: dict[int, Callable[[], None]]  = {}
         self.options: dict[int, str] = {
@@ -67,6 +66,16 @@ class Menu:
         self.functions[3] = self.view_tickets
         self.functions[4] = self.remove_tickets
         self.functions[0] = self.exit
+
+    @property
+    def clear(self) -> str:
+        if os.name == "nt":
+            os.system("cls")
+        elif os.name == "posix":
+            os.system("clear")
+        else:
+            return Config.ANSI["clear"] + Config.ANSI["home"]
+        return ""
 
     def menu(self) -> None:
         while True:
@@ -135,7 +144,7 @@ class Menu:
             choice = input("\nPurchase this ticket? (y/n)\n").strip().lower()
             match choice:
                 case "y":
-                    print(Ticket.buy(ticket))
+                    Ticket.buy(ticket)
                     return
                 case "n":
                     return
