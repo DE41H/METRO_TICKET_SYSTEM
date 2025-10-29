@@ -32,21 +32,26 @@ class Config:
         "magenta": "\033[35m",
         "cyan": "\033[36m",
         "grey": "\033[90m",
+        "bright_red": "\033[91m",
+        "bright_green": "\033[92m",
         "orange": "\033[93m",
+        "bright_blue": "\033[94m",
         "pink": "\033[95m",
+        "bright_cyan": "\033[96m",
         "clear": "\033[H",
+        "clear_scrollback": "\033[3J",
         "home": "\033[J"
     }
     LINE_COLORS: ClassVar[dict[str, str]] = {
-        "Red Line": ANSI["red"],
-        "Yellow Line": ANSI["yellow"],
-        "Blue Line": ANSI["blue"],
-        "Green Line": ANSI["green"],
+        "Red Line": ANSI["bright_red"],
+        "Yellow Line": ANSI["orange"],
+        "Blue Line": ANSI["bright_blue"],
+        "Green Line": ANSI["bright_green"],
         "Violet Line": ANSI["magenta"],
         "Pink Line": ANSI["pink"],
-        "Magenta Line": ANSI["magenta"],
+        "Magenta Line": ANSI["red"],
         "Grey Line": ANSI["grey"],
-        "Airport Express": ANSI["orange"]
+        "Airport Express": ANSI["bright_cyan"]
     }
 
 
@@ -73,7 +78,7 @@ class Menu:
             os.system("cls")
             return ""
         else:
-            return Config.ANSI["clear"] + Config.ANSI["home"]
+            return Config.ANSI["clear"] + Config.ANSI["home"] + Config.ANSI["clear_scrollback"]
 
     def menu(self) -> None:
         while True:
