@@ -56,14 +56,16 @@ class Menu:
     def __init__(self) -> None:
         self.functions: dict[int, Callable[[], None]]  = {}
         self.options: dict[int, str] = {
-            1: "Purchase Tickets",
-            2: "View Tickets",
-            3: "Delete Tickets",
+            1: "View Metro Stations",
+            2: "Purchase Tickets",
+            3: "View Tickets",
+            4: "Delete Tickets",
             0: "Exit"
         }
-        self.functions[1] = self.buy_tickets
-        self.functions[2] = self.view_tickets
-        self.functions[3] = self.remove_tickets
+        self.functions[1] = self.view_stations
+        self.functions[2] = self.buy_tickets
+        self.functions[3] = self.view_tickets
+        self.functions[4] = self.remove_tickets
         self.functions[0] = self.exit
 
     def menu(self) -> None:
@@ -80,11 +82,17 @@ class Menu:
             else:
                 print("Not a valid Option ID!\nTry Again...")
                 time.sleep(Config.DELAY)
+
+    def view_stations(self) -> None:
+        print(self.clear)
+        print(f'{Config.ANSI["bold"]}=============[ METRO STATIONS ]============={Config.ANSI["reset"]}\n')
+        print(Station.display())
+        input("Press ENTER to continue...")
     
     def view_tickets(self) -> None:
         while True:
             print(self.clear)
-            print(f'{Config.ANSI["bold"]}=============[ TICKET VIEWING ]============={Config.ANSI["reset"]}\n')
+            print(f'{Config.ANSI["bold"]}=============[ TICKETS ]============={Config.ANSI["reset"]}\n')
             print(Ticket.display())
             choice: str = input("Enter Ticket ID (ENTER -> abort): ")
             if choice == "":
