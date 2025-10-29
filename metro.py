@@ -71,11 +71,9 @@ class Menu:
     def clear(self) -> str:
         if os.name == "nt":
             os.system("cls")
-        elif os.name == "posix":
-            os.system("clear")
+            return ""
         else:
             return Config.ANSI["clear"] + Config.ANSI["home"]
-        return ""
 
     def menu(self) -> None:
         while True:
