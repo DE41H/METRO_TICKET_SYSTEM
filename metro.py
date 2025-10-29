@@ -254,9 +254,9 @@ class Station:
         if cls.display_text == "":
             out: str = ""
             for line, stations in Line.lines.items():
-                out += f'\n {Config.ANSI["underline"]}{line}\n{Config.ANSI["reset"]}'
+                out += f'\n {Config.LINE_COLORS[line]}{Config.ANSI["underline"]}{line}\n{Config.ANSI["reset"]}'
                 for station in stations:
-                    out += f' [{station.uid}] {station.name}\n'
+                    out += f' [{station.uid}] {Config.LINE_COLORS[line]}{station.name}{Config.ANSI["reset"]}\n'
             cls.display_text = out
         return cls.display_text
 
