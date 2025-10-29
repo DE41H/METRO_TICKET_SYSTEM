@@ -196,6 +196,7 @@ class Menu:
 class Station:
     
     stations: ClassVar[dict[int, Station]] = {}
+    name_to_uid: ClassVar[dict[str, int]] = {}
     display_text: ClassVar[str] = ""
 
     def __init__(self, uid: int, name: str) -> None:
@@ -242,6 +243,7 @@ class Station:
                 reader = csv.DictReader(file, delimiter=Config.DELIMITER)
                 for row in reader:
                     cls.stations[int(row["uid"])] = Station(int(row["uid"]), row["name"])
+                    cls.name_to_uid[row["name"]] = int(row["uid"])
                     temp.add((int(row["uid"]), row["neighbours"]))
                 for temp_uid, temp_neighbours in temp:
                     cls.stations[temp_uid].neighbours = frozenset(cls.split(temp_neighbours))
@@ -271,11 +273,9 @@ class Station:
     
     @classmethod
     def exists(cls, name: str) -> int:
-        for uid, station in cls.stations.items():
-            if station.name.lower() == name.lower():
-                return uid
-        else:
-            return 0
+        if name in cls.name_to_uid:
+            return cls.name_to_uid[name]
+        return 0
     
     @classmethod
     def split(cls, prompt: str) -> tuple[Station, ...]:
