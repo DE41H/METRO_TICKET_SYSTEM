@@ -9,6 +9,10 @@ import string
 import random
 from collections import deque
 
+import webbrowser
+import networkx as nx
+from pyvis.network import Network # type: ignore
+
 
 class Config:
 
@@ -16,6 +20,7 @@ class Config:
     STATIONS_FILE: ClassVar[str] = "data/stations.csv"
     LINES_FILE: ClassVar[str] = "data/lines.csv"
     TICKETS_FILE: ClassVar[str] = "data/tickets.csv"
+    MAP_FILE: ClassVar[str] = "data/metro_map.html"
     DELIMITER: ClassVar[str] = ","
     LIST_DELIMITER: ClassVar[str] = "|"
     NEWLINE: ClassVar[str] = ""
@@ -53,6 +58,17 @@ class Config:
         "Grey Line": ANSI["grey"],
         "Airport Express": ANSI["bright_cyan"]
     }
+    EDGE_COLORS: ClassVar[dict[str, str]] = {
+        "Red Line": "#e60005",
+        "Yellow Line": "#f3d000",
+        "Blue Line": "#00529e",
+        "Green Line": "#00843d",
+        "Violet Line": "#62008f",
+        "Pink Line": "#f400a1",
+        "Magenta Line": "#c0007b",
+        "Grey Line": "#808080",
+        "Airport Express": "#00aae7"
+    }
 
 
 class Menu:
@@ -61,15 +77,17 @@ class Menu:
         self.functions: dict[int, Callable[[], None]]  = {}
         self.options: dict[int, str] = {
             1: "View Metro Stations",
-            2: "Purchase Tickets",
-            3: "View Tickets",
-            4: "Delete Tickets",
+            2: "View Metro Map",
+            3: "Purchase Tickets",
+            4: "View Tickets",
+            5: "Delete Tickets",
             0: "Exit"
         }
         self.functions[1] = self.view_stations
-        self.functions[2] = self.buy_tickets
-        self.functions[3] = self.view_tickets
-        self.functions[4] = self.remove_tickets
+        self.functions[2] = self.view_map
+        self.functions[3] = self.buy_tickets
+        self.functions[4] = self.view_tickets
+        self.functions[5] = self.remove_tickets
         self.functions[0] = self.exit
 
     @property
@@ -94,6 +112,16 @@ class Menu:
             else:
                 print("Not a valid Option ID!\nTry Again...")
                 time.sleep(Config.DELAY)
+
+    def view_map(self) -> None:
+        print(self.clear)
+        if not os.path.exists(Config.MAP_FILE):
+            graph: nx.Graph[int] = Station.get_graph()
+            net = Network(height="1000px", width="100%", notebook=True)
+            net.from_nx(graph) #type: ignore
+            net.show(Config.MAP_FILE) #type: ignore
+        path: str = os.path.abspath(Config.MAP_FILE)
+        webbrowser.open("file://" + path)
 
     def view_stations(self) -> None:
         print(self.clear)
@@ -197,7 +225,8 @@ class Station:
     
     stations: ClassVar[dict[int, Station]] = {}
     name_to_uid: ClassVar[dict[str, int]] = {}
-    display_text: ClassVar[str] = ""
+    display_cache: ClassVar[str] = ""
+    graph: ClassVar[nx.Graph[int]] | None = None
 
     def __init__(self, uid: int, name: str) -> None:
         self.uid: int = uid
@@ -234,6 +263,20 @@ class Station:
                     parents[neighbour.uid] = station.uid
                     queue.append(neighbour.uid)
         return tuple()
+    
+    @classmethod
+    def get_graph(cls) -> nx.Graph[int]:
+        if not cls.graph:
+            G: nx.Graph[int] = nx.Graph()
+            for uid in cls.stations:
+                G.add_node(uid, label=Station.stations[uid].name, title=str(Station.stations[uid].uid))
+            for uid, station in cls.stations.items():
+                for neighbour in station.neighbours:
+                    if not G.has_edge(uid, neighbour.uid):
+                        line: str = Line.get_line(station, neighbour)
+                        G.add_edge(uid, neighbour.uid, color=Config.EDGE_COLORS[line])
+            cls.graph = G
+        return cls.graph
 
     @classmethod
     def load(cls) -> None:
@@ -258,14 +301,14 @@ class Station:
 
     @classmethod
     def display(cls) -> str:
-        if cls.display_text == "":
+        if cls.display_cache == "":
             out: str = ""
             for line, stations in Line.lines.items():
                 out += f'\n {Config.LINE_COLORS[line]}{Config.ANSI["underline"]}{line}\n{Config.ANSI["reset"]}'
                 for station in stations:
                     out += f' [{station.uid}] {Config.LINE_COLORS[line]}{station.name}{Config.ANSI["reset"]}\n'
-            cls.display_text = out
-        return cls.display_text
+            cls.display_cache = out
+        return cls.display_cache
 
     @classmethod
     def from_uid(cls, uid: int) -> Station:
