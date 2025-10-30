@@ -81,7 +81,6 @@ class Config:
             return hash.hexdigest()
 
 
-
 class Menu:
 
     def __init__(self) -> None:
@@ -389,7 +388,7 @@ class Line:
                         instructions += Config.LINE_COLORS[next_line] + path[i].name  + Config.ANSI["reset"]
         instructions += "\n"
         return instructions
-
+    
 
 class Ticket:
 
