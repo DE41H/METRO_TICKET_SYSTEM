@@ -9,6 +9,7 @@ import string
 import random
 from collections import deque
 
+import hashlib
 import webbrowser
 import networkx as nx
 from pyvis.network import Network # type: ignore
@@ -17,10 +18,11 @@ from pyvis.network import Network # type: ignore
 class Config:
 
     DELAY: ClassVar[float] = 1.2
-    STATIONS_FILE: ClassVar[str] = "data/stations.csv"
-    LINES_FILE: ClassVar[str] = "data/lines.csv"
-    TICKETS_FILE: ClassVar[str] = "data/tickets.csv"
-    MAP_FILE: ClassVar[str] = "data/metro_map.html"
+    CWD: ClassVar[str] = os.path.dirname(os.path.abspath(__file__))
+    STATIONS_FILE: ClassVar[str] = CWD + "/data/stations.csv"
+    LINES_FILE: ClassVar[str] = CWD + "/data/lines.csv"
+    TICKETS_FILE: ClassVar[str] = CWD + "/data/tickets.csv"
+    MAP_FILE: ClassVar[str] = CWD + "/maps/metro_"
     DELIMITER: ClassVar[str] = ","
     LIST_DELIMITER: ClassVar[str] = "|"
     NEWLINE: ClassVar[str] = ""
@@ -69,6 +71,15 @@ class Config:
         "Grey Line": "#808080",
         "Airport Express": "#00aae7"
     }
+
+    @classmethod
+    def SHA256(cls, path: str) -> str:
+        hash = hashlib.sha256()
+        with open(path, "rb") as file:
+            for block in iter(lambda: file.read(4096), b""):
+                hash.update(block)
+            return hash.hexdigest()
+
 
 
 class Menu:
@@ -119,9 +130,14 @@ class Menu:
             graph: nx.Graph[int] = Station.get_graph()
             net = Network(height="1000px", width="100%", notebook=True)
             net.from_nx(graph) #type: ignore
-            net.show(Config.MAP_FILE) #type: ignore
-        path: str = os.path.abspath(Config.MAP_FILE)
-        webbrowser.open("file://" + path)
+            print(self.clear)
+            try:
+                net.show(Config.MAP_FILE) #type: ignore
+            except FileNotFoundError:
+                print(f'Error: {Config.CWD}/maps folder not found!Try Again...')
+                time.sleep(Config.DELAY)
+                return
+        webbrowser.open("file://" + Config.MAP_FILE)
 
     def view_stations(self) -> None:
         print(self.clear)
@@ -269,7 +285,7 @@ class Station:
         if not cls.graph:
             G: nx.Graph[int] = nx.Graph()
             for uid in cls.stations:
-                G.add_node(uid, label=Station.stations[uid].name, title=str(Station.stations[uid].uid))
+                G.add_node(uid, label=Station.stations[uid].name, title=str(Station.stations[uid].uid), size=15, font={'size': 30, 'vadjust': 5})
             for uid, station in cls.stations.items():
                 for neighbour in station.neighbours:
                     if not G.has_edge(uid, neighbour.uid):
@@ -462,6 +478,7 @@ def cache() -> None:
     Station.load()
     Line.load()
     Ticket.load()
+    Config.MAP_FILE += Config.SHA256(Config.STATIONS_FILE) + Config.SHA256(Config.LINES_FILE) + ".html"
 
 def main() -> None:
     while True:
