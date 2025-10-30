@@ -1,110 +1,165 @@
-# Metro Management System
+# 🚇 Metro Ticketing System
 
-A command-line based Metro transit management program for exploring stations, viewing metro routes, purchasing tickets, and visualizing network maps. Designed for flexibility, it allows users to customize metro data and appearance easily by modifying CSV files and configuration settings.
+A command-line **Metro Network Simulation and Ticketing Program** that allows users to view stations, visualize metro maps, purchase tickets, and calculate travel routes — all while being fully customizable through editable data files and configuration settings.
 
-## Project Description
+---
 
-This program simulates a metro system featuring station and line management, interactive ticketing, and map visualization. It reads all its data from CSV files, enabling you to tailor the metro network by adding or editing stations, lines, and pricing rules. The application uses graph-based algorithms to compute routes and supports persistent ticket storage, making it ideal for educational projects, prototyping, or simple transit simulations.
+## 📂 Repository Structure
 
-## Core Features
-
-- **Metro Station Browser:** View a list of metro stations grouped by lines.
-- **Interactive Metro Map:** Generate and display an interactive map of the metro network.
-- **Ticket Purchase & Management:** Buy tickets between two stations, view issued tickets, and delete tickets.
-- **Route Guidance:** Clear step-by-step instructions show the path between stations.
-- **Persistent Data Storage:** All tickets, stations, and lines are saved and loaded from CSV files.
-- **Robust Error Handling:** Graceful handling of missing files, format errors, and invalid input.
-- **Extensible Design:** Easily extend functionality by modifying source code or data files.
-
-## Customizable and Optional Behaviors
-
-- Modify the metro network by editing CSV files:
-  - `stations.csv`: Define stations and their connections.
-  - `lines.csv`: Define metro lines and assign stations to lines.
-- Customize pricing, display colors, and terminal behaviors through the `Config` class.
-- Adjust delay timings for menu navigation and screen clearing.
-- Use your preferred color schemes for each metro line to enhance terminal output.
-- Change delimiters used in CSV files if necessary.
-- Map visualization output location and filename can be configured.
-  
-## Example Config Class
-
-class Config:
-
-# Paths to CSV data files
-STATIONSFILE = "data/stations.csv"
-LINESFILE = "data/lines.csv"
-TICKETSFILE = "data/tickets.csv"
-MAPFILE = "maps/metro.html"
-
-# CSV formatting options
-DELIMITTER = ","
-LISTDELIMITER = ";"
-NEWLINE = "\n"
-
-# Ticket pricing factor (price per station hop)
-PRICEFACTOR = 3
-
-# Menu and screen clear delay in seconds
-DELAY = 1.2
-
-# Terminal text colors (ANSI escape sequences)
-LINECOLORS = {
-    "Red Line": "\033[91m",
-    "Yellow Line": "\033[93m",
-    "Blue Line": "\033[94m",
-    "Green Line": "\033[92m",
-    # add or customize colors per line
-}
-
-# Text style ANSI codes
-ANSI = {
-    "reset": "\033[0m",
-    "bold": "\033[1m",
-    "underline": "\033[4m",
-    # add styles as required
-}
-
-### Explanation of Config Options
-
-- `STATIONSFILE`, `LINESFILE`, `TICKETSFILE`: File paths to CSV data files; replace these to load different datasets.
-- `MAPFILE`: Output HTML file showing the generated metro map visualization.
-- `DELIMITTER` and `LISTDELIMITER`: CSV field and list item separators; useful if your CSV uses different separators.
-- `PRICEFACTOR`: Multiplier applied to the number of stations in a ticket route to calculate price.
-- `DELAY`: Pause time between menu display updates for better user experience.
-- `LINECOLORS`: Maps line names to terminal color codes to customize colored output.
-- `ANSI`: Dictionary holding terminal text formatting codes to style text in menus and outputs.
-
-## Repository Structure
-
-.
+```plaintext
 ├── data/
-│ ├── stations.csv # Station definitions and connections
-│ ├── lines.csv # Metro lines and their stations
-│ ├── tickets.csv # Persistent storage of purchased tickets
+│   ├── stations.csv        # List of stations and connections
+│   ├── lines.csv           # Metro lines and associated stations
+│   ├── tickets.csv         # Purchased tickets (auto-generated)
+│
 ├── maps/
-│ └── .gitkeep # Folder to save generated map html files
+│   ├── .gitkeep            # Keeps folder structure in git
+│
 ├── versions/
-│ └── v1.0.0.zip # Program release versions
-├── metro.py # Main program code
-├── requirements.txt # Python dependencies
-├── LICENSE # Apache License 2.0
-├── .gitignore # Git ignore file
-└── README.md # This file
+│   ├── v1.0.0.zip          # Program archive (first release)
+│
+├── metro.py                # Main program source code
+├── requirements.txt        # Python dependencies
+├── LICENSE                 # Apache 2.0 License
+├── .gitignore              # Ignored files
+└── README.md               # This file
+```
 
+---
 
-## Getting Started
+## ✨ Features
 
-1. Install dependencies with:
+### 🧭 Interactive Command-Line Menu
+Navigate through options such as:
+- 🏙️ View Metro Stations  
+- 🗺️ View Metro Map  
+- 🎫 Purchase Tickets  
+- 📄 View Tickets  
+- ❌ Delete Tickets  
+- 🚪 Exit Program  
+
+### 🌐 Dynamic Metro Map Generation
+- Generates a **visual network graph** of all stations and connections.  
+- Uses [**NetworkX**](https://networkx.org/) and [**PyVis**](https://pyvis.readthedocs.io/) to render an interactive map viewable in any browser.  
+
+### 💳 Ticket Management
+- Purchase, view, and delete tickets easily.
+- Tickets are automatically saved to `tickets.csv` and persist between runs.
+
+### 🚉 Shortest Route Calculation
+- Computes the **shortest path** between any two stations.  
+- Provides **step-by-step transfer instructions** between lines.
+
+### ⚙️ Configurable Design
+Fully data-driven and user-customizable:
+- Edit `stations.csv` and `lines.csv` to add or modify metro data.
+- Adjust runtime behavior in the `Config` class, including:
+  - `DELAY` (UI timing)
+  - `PRICE_FACTOR` (ticket pricing)
+  - Custom color themes and formatting.
+
+### 🔐 Data Integrity & Caching
+- Metro map filenames are **hashed using SHA256** to reflect changes in data.  
+- Ensures cached versions stay unique to the dataset.
+
+---
+
+## 🧰 Installation
+
+### 1️⃣ Clone the Repository
+```bash
+git clone https://github.com/<your-username>/<your-repo>.git
+cd <your-repo>
+```
+
+### 2️⃣ Install Dependencies
+```bash
 pip install -r requirements.txt
+```
 
-2. Run the program:
+### 3️⃣ Run the Program
+```bash
 python metro.py
+```
 
-3. Use the interactive menu to explore stations, buy tickets, view the metro map, and manage your tickets.
+---
 
-4. Customize your metro experience by editing CSV data files or adjusting configuration options in the `Config` class.
+## 🧩 Configuration and Customization
 
-## License
+| Component | Description | Editable |
+|------------|-------------|-----------|
+| **`Config` Class** | Contains runtime settings like delays, paths, pricing, and colors | ✅ |
+| **`stations.csv`** | Defines station IDs, names, and neighbor relationships | ✅ |
+| **`lines.csv`** | Defines metro lines and connected stations | ✅ |
+| **`tickets.csv`** | Stores purchased tickets (auto-managed) | ⚠️ Avoid manual edits |
 
-This project is licensed under the Apache License 2.0. See LICENSE for details.
+Example of editing line colors or pricing in `Config`:
+```python
+PRICE_FACTOR = 5  # Increases ticket price multiplier
+LINE_COLORS["Blue Line"] = "[94m"  # Custom ANSI color
+```
+
+---
+
+## 🧠 Example Usage
+
+**Main Menu:**
+```
+=============[ MAIN MENU ]=============
+[1] View Metro Stations
+[2] View Metro Map
+[3] Purchase Tickets
+[4] View Tickets
+[5] Delete Tickets
+[0] Exit
+```
+
+**Purchasing a Ticket:**
+```
+Enter starting Station ID (ENTER -> abort): 1
+Enter destination Station ID (ENTER -> abort): 8
+Purchase this ticket? (y/n)
+```
+
+**Viewing the Metro Map:**
+- Automatically opens in your default web browser as an interactive HTML visualization.
+
+---
+
+## 📦 Dependencies
+
+The project relies on:
+- [networkx](https://networkx.org/)
+- [pyvis](https://pyvis.readthedocs.io/)
+
+Install them with:
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## 🧾 License
+
+Licensed under the **Apache License 2.0**.  
+See the [LICENSE](./LICENSE) file for full details.
+
+---
+
+## 🕒 Version History
+
+| Version | Date | Notes |
+|----------|------|-------|
+| **v1.0.0** | Initial Release | 🎉 First public version |
+
+---
+
+## 💡 Notes & Tips
+
+- Generated maps are stored in the `maps/` directory as `.html` files.  
+- Filenames include **unique SHA256 hashes** of metro data.  
+- Always back up your `data/` directory before editing CSVs manually.  
+
+---
+
+**🚆 Enjoy exploring and customizing your metro network simulation!**
