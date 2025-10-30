@@ -1,136 +1,110 @@
 # Metro Management System
 
-A highly customizable, command-line transit simulation and ticketing tool.
+A command-line based Metro transit management program for exploring stations, viewing metro routes, purchasing tickets, and visualizing network maps. Designed for flexibility, it allows users to customize metro data and appearance easily by modifying CSV files and configuration settings.
 
-> This program simulates a metro system featuring station and line management, interactive ticketing, and map visualization.
->
-> This project is built to be **highly flexible**, allowing you to create and manage your own metro system just by editing simple CSV files. It uses graph-based algorithms to find routes, manages persistent ticket storage, and provides clear route guidance, making it perfect for educational projects, prototyping, or simple transit simulations.
+## Project Description
 
-## ✨ Core Features
+This program simulates a metro system featuring station and line management, interactive ticketing, and map visualization. It reads all its data from CSV files, enabling you to tailor the metro network by adding or editing stations, lines, and pricing rules. The application uses graph-based algorithms to compute routes and supports persistent ticket storage, making it ideal for educational projects, prototyping, or simple transit simulations.
 
-* 🚉 **Station & Line Browser:** View all available stations, neatly grouped by their respective metro lines.
-* 🗺️ **Interactive Map:** Automatically generates and opens an interactive HTML map of your metro network.
-* 🎫 **Ticket Management:** Purchase tickets between any two stations, view a list of all issued tickets, and delete old tickets.
-* ↪️ **Route Guidance:** Get clear, step-by-step instructions for your journey, including line changes.
-* 💾 **Persistent Data:** All stations, lines, and purchased tickets are saved to and loaded from CSV files.
-* 🔧 **Extensible Design:** Easily add new features or modify existing ones. The system is built to be extended.
-* ⚠️ **Robust Error Handling:** Gracefully handles missing files, formatting errors, and invalid user input.
+## Core Features
 
-## 🚀 Getting Started
+- **Metro Station Browser:** View a list of metro stations grouped by lines.
+- **Interactive Metro Map:** Generate and display an interactive map of the metro network.
+- **Ticket Purchase & Management:** Buy tickets between two stations, view issued tickets, and delete tickets.
+- **Route Guidance:** Clear step-by-step instructions show the path between stations.
+- **Persistent Data Storage:** All tickets, stations, and lines are saved and loaded from CSV files.
+- **Robust Error Handling:** Graceful handling of missing files, format errors, and invalid input.
+- **Extensible Design:** Easily extend functionality by modifying source code or data files.
 
-### 1. Prerequisites
-* Python 3.x
-* `pip` (Python package installer)
+## Customizable and Optional Behaviors
 
-### 2. Installation
-
-1.  Clone this repository (or download the source code).
-2.  Navigate to the project directory:
-    ```bash
-    cd /path/to/metro-management-system
-    ```
-3.  Install the required Python dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-### 3. Running the Program
-
-Execute the main script from your terminal:
-```bash
-python metro.py
-
-You will be greeted by the interactive main menu. From there, you can explore stations, buy tickets, view the map, and manage your purchased tickets.
-
-🛠️ How to Customize Your Metro
-
-This system is fully data-driven. You can create your own metro network without touching the Python code.
-
-1. Editing Network Data (CSV Files)
-
-All network data is stored in the /data folder:
-
-    data/stations.csv: Define all your stations and their direct connections (neighbors).
-
-    data/lines.csv: Create metro lines (e.g., "Red Line") and list the stations that belong to each line in order.
-
-    data/tickets.csv: This file stores purchased tickets. You can clear it to reset the ticket history.
-
-2. Configuring Application Behavior (Config Class)
-
-All application settings are located in the Config class within metro.py. You can easily change file paths, pricing, and terminal appearance.
-
-Example: Config class in metro.py
-
-Python
+- Modify the metro network by editing CSV files:
+  - `stations.csv`: Define stations and their connections.
+  - `lines.csv`: Define metro lines and assign stations to lines.
+- Customize pricing, display colors, and terminal behaviors through the `Config` class.
+- Adjust delay timings for menu navigation and screen clearing.
+- Use your preferred color schemes for each metro line to enhance terminal output.
+- Change delimiters used in CSV files if necessary.
+- Map visualization output location and filename can be configured.
+  
+## Example Config Class
 
 class Config:
 
-    # Paths to CSV data files
-    STATIONSFILE = "data/stations.csv"
-    LINESFILE = "data/lines.csv"
-    TICKETSFILE = "data/tickets.csv"
-    MAPFILE = "maps/metro.html"
+# Paths to CSV data files
+STATIONSFILE = "data/stations.csv"
+LINESFILE = "data/lines.csv"
+TICKETSFILE = "data/tickets.csv"
+MAPFILE = "maps/metro.html"
 
-    # CSV formatting options
-    DELIMITER = ","
-    LISTDELIMITER = ";"
-    NEWLINE = "\n"
+# CSV formatting options
+DELIMITTER = ","
+LISTDELIMITER = ";"
+NEWLINE = "\n"
 
-    # Ticket pricing factor (price per station hop)
-    PRICEFACTOR = 3
+# Ticket pricing factor (price per station hop)
+PRICEFACTOR = 3
 
-    # Menu and screen clear delay in seconds
-    DELAY = 1.2
+# Menu and screen clear delay in seconds
+DELAY = 1.2
 
-    # Terminal text colors (ANSI escape sequences)
-    LINECOLORS = {
-        "Red Line": "\033[91m",
-        "Yellow Line": "\033[93m",
-        "Blue Line": "\033[94m",
-        "Green Line": "\033[92m",
-        # add or customize colors per line
-    }
+# Terminal text colors (ANSI escape sequences)
+LINECOLORS = {
+    "Red Line": "\033[91m",
+    "Yellow Line": "\033[93m",
+    "Blue Line": "\033[94m",
+    "Green Line": "\033[92m",
+    # add or customize colors per line
+}
 
-    # Text style ANSI codes
-    ANSI = {
-        "reset": "\033[0m",
-        "bold": "\033[1m",
-        "underline": "\033[4m",
-        # add styles as required
-    }
+# Text style ANSI codes
+ANSI = {
+    "reset": "\033[0m",
+    "bold": "\033[1m",
+    "underline": "\033[4m",
+    # add styles as required
+}
 
-Configuration Options Explained
+### Explanation of Config Options
 
-    File Paths: STATIONSFILE, LINESFILE, TICKETSFILE (data sources), MAPFILE (output path for the HTML map).
+- `STATIONSFILE`, `LINESFILE`, `TICKETSFILE`: File paths to CSV data files; replace these to load different datasets.
+- `MAPFILE`: Output HTML file showing the generated metro map visualization.
+- `DELIMITTER` and `LISTDELIMITER`: CSV field and list item separators; useful if your CSV uses different separators.
+- `PRICEFACTOR`: Multiplier applied to the number of stations in a ticket route to calculate price.
+- `DELAY`: Pause time between menu display updates for better user experience.
+- `LINECOLORS`: Maps line names to terminal color codes to customize colored output.
+- `ANSI`: Dictionary holding terminal text formatting codes to style text in menus and outputs.
 
-    CSV Formatting: DELIMITER and LISTDELIMITER (change if your CSVs use tabs or pipes).
-
-    Pricing: PRICEFACTOR is the multiplier used to calculate a ticket's price based on the number of stations in the route.
-
-    UX: DELAY is the pause time (in seconds) between menus for a smoother user experience.
-
-    Appearance: LINECOLORS and ANSI dictionaries map line names and styles to ANSI escape codes for colorful and styled terminal output.
-
-📂 Repository Structure
-
-Bash
+## Repository Structure
 
 .
 ├── data/
-│   ├── stations.csv    # Station definitions and connections
-│   ├── lines.csv       # Metro lines and their stations
-│   └── tickets.csv     # Persistent storage of purchased tickets
+│ ├── stations.csv # Station definitions and connections
+│ ├── lines.csv # Metro lines and their stations
+│ ├── tickets.csv # Persistent storage of purchased tickets
 ├── maps/
-│   └── .gitkeep        # Folder to save generated map html files
+│ └── .gitkeep # Folder to save generated map html files
 ├── versions/
-│   └── v1.0.0.zip      # Program release versions
-├── metro.py            # Main program code
-├── requirements.txt    # Python dependencies
-├── LICENSE             # Apache License 2.0
-├── .gitignore          # Git ignore file
-└── README.md           # This file
+│ └── v1.0.0.zip # Program release versions
+├── metro.py # Main program code
+├── requirements.txt # Python dependencies
+├── LICENSE # Apache License 2.0
+├── .gitignore # Git ignore file
+└── README.md # This file
 
-📜 License
 
-This project is licensed under the Apache License 2.0. See the LICENSE file for details.
+## Getting Started
+
+1. Install dependencies with:
+pip install -r requirements.txt
+
+2. Run the program:
+python metro.py
+
+3. Use the interactive menu to explore stations, buy tickets, view the metro map, and manage your tickets.
+
+4. Customize your metro experience by editing CSV data files or adjusting configuration options in the `Config` class.
+
+## License
+
+This project is licensed under the Apache License 2.0. See LICENSE for details.
