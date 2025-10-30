@@ -19,10 +19,10 @@ class Config:
 
     DELAY: ClassVar[float] = 1.2
     CWD: ClassVar[str] = os.path.dirname(os.path.abspath(__file__))
-    STATIONS_FILE: ClassVar[str] = CWD + "/data/stations.csv"
-    LINES_FILE: ClassVar[str] = CWD + "/data/lines.csv"
-    TICKETS_FILE: ClassVar[str] = CWD + "/data/tickets.csv"
-    MAP_FILE: ClassVar[str] = CWD + "/maps/metro_"
+    STATIONS_FILE: ClassVar[str] = os.path.join(CWD, "data", "stations.csv")
+    LINES_FILE: ClassVar[str] = os.path.join(CWD, "data", "lines.csv")
+    TICKETS_FILE: ClassVar[str] = os.path.join(CWD, "data", "tickets.csv")
+    MAP_FILE: ClassVar[str] = os.path.join(CWD, "maps", "metro_")
     DELIMITER: ClassVar[str] = ","
     LIST_DELIMITER: ClassVar[str] = "|"
     NEWLINE: ClassVar[str] = ""
@@ -72,8 +72,8 @@ class Config:
         "Airport Express": "#00aae7"
     }
 
-    @classmethod
-    def SHA256(cls, path: str) -> str:
+    @staticmethod
+    def SHA256(path: str) -> str:
         hash = hashlib.sha256()
         with open(path, "rb") as file:
             for block in iter(lambda: file.read(4096), b""):
